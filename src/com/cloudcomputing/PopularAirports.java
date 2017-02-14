@@ -56,17 +56,17 @@ public class PopularAirports {
             Pattern.compile("\n", Pattern.MULTILINE)
                     .splitAsStream(content)
                     .map(line -> line.split(","))
-                    .filter( tokens -> tokens.length >= 14)
+                    .filter( tokens -> tokens.length >= 18)
                     .forEach(tokens -> {
                         // FROM
-                        word.set(tokens[6]);
+                        word.set(tokens[9]);
                         try {
                             context.write(word, one);
                         } catch (Exception e) {
                             System.out.println(e);
                         }
                         // TO
-                        word.set(tokens[14]);
+                        word.set(tokens[18]);
                         try {
                             context.write(word, one);
                         } catch (Exception e) {
