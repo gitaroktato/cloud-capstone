@@ -107,11 +107,12 @@ public class ZipFileRecordReader
         
         // Filename
         currentKey = new Text( entry.getName() );
-        
         // Read the file contents
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        byte[] temp = new byte[8192];
-        while ( true )
+        byte[] temp = new byte[8192 * 1024];
+        int threshold = 1024;
+        // FIXME for large files!!!
+        for ( int i = 0; i < threshold; i++ )
         {
             int bytesRead = 0;
             try

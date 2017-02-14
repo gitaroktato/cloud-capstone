@@ -2,8 +2,11 @@ package com.cloudcomputing;
 
 
 import com.cotdp.hadoop.ZipFileInputFormat;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -15,13 +18,79 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import java.io.IOException;
 import java.util.StringTokenizer;
+import java.util.regex.Pattern;
 
 /**
  * Created by sniper on 2017.02.13..
  */
 public class PopularAirports {
 
-    
+    private static final Log LOG = LogFactory.getLog(PopularAirports.class);
+
+
+    /**
+     * This Mapper class checks the filename ends with the .txt extension, cleans
+     * the text and then applies the simple WordCount algorithm.
+     */
+    public static class MyMapper
+            extends Mapper<Text, BytesWritable, Text, IntWritable> {
+        private final static IntWritable one = new IntWritable(1);
+        private Text word = new Text();
+
+        public void map(Text key, BytesWritable value, Context context)
+                throws IOException, InterruptedException {
+            // NOTE: the filename is the *full* path within the ZIP file
+            // e.g. "subdir1/subsubdir2/Ulysses-18.txt"
+            String filename = key.toString();
+            LOG.info("map: " + filename);
+
+            // We only want to process .txt files
+            if (filename.endsWith(".csv") == false)
+                return;
+
+            // Prepare the content
+            String content = new String(value.getBytes(), "UTF-8");
+            //content = content.replaceAll( "[^A-Za-z \n]", "" ).toLowerCase();
+
+            // Tokenize the content
+            Pattern.compile("\n", Pattern.MULTILINE)
+                    .splitAsStream(content)
+                    .map(line -> line.split(","))
+                    .filter( tokens -> tokens.length >= 14)
+                    .forEach(tokens -> {
+                        // FROM
+                        word.set(tokens[6]);
+                        try {
+                            context.write(word, one);
+                        } catch (Exception e) {
+                            System.out.println(e);
+                        }
+                        // TO
+                        word.set(tokens[14]);
+                        try {
+                            context.write(word, one);
+                        } catch (Exception e) {
+                            System.out.println(e);
+                        }
+                    });
+        }
+    }
+
+    /**
+     * Reducer for the ZipFile test, identical to the standard WordCount example
+     */
+    public static class MyReducer
+            extends Reducer<Text, IntWritable, Text, IntWritable> {
+        public void reduce(Text key, Iterable<IntWritable> values, Context context)
+                throws IOException, InterruptedException {
+            int sum = 0;
+            for (IntWritable val : values) {
+                sum += val.get();
+            }
+            context.write(key, new IntWritable(sum));
+        }
+    }
+
 
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
@@ -40,7 +109,7 @@ public class PopularAirports {
         job.setOutputValueClass(IntWritable.class);
 
 // We want to be fault-tolerant
-        ZipFileInputFormat.setLenient( true );
+        ZipFileInputFormat.setLenient(true);
         ZipFileInputFormat.setInputPaths(job, new Path(args[0]));
         TextOutputFormat.setOutputPath(job, new Path(args[1]));
 //
