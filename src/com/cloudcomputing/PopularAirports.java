@@ -35,6 +35,8 @@ public class PopularAirports {
     public static class MyMapper
             extends Mapper<Text, Text, Text, IntWritable> {
         private final static IntWritable one = new IntWritable(1);
+        public static final int ORIGIN_AT = 9;
+        public static final int DESTINATION_AT = 18;
         private Text word = new Text();
 
         public void map(Text key, Text value, Context context)
@@ -54,17 +56,17 @@ public class PopularAirports {
             Pattern.compile("\n", Pattern.MULTILINE)
                     .splitAsStream(value.toString())
                     .map(line -> line.split(","))
-                    .filter( tokens -> tokens.length >= 18)
+                    .filter( tokens -> tokens.length >= DESTINATION_AT)
                     .forEach(tokens -> {
                         // FROM
-                        word.set(tokens[9]);
+                        word.set(tokens[ORIGIN_AT]);
                         try {
                             context.write(word, one);
                         } catch (Exception e) {
                             System.out.println(e);
                         }
                         // TO
-                        word.set(tokens[18]);
+                        word.set(tokens[DESTINATION_AT]);
                         try {
                             context.write(word, one);
                         } catch (Exception e) {
@@ -96,6 +98,7 @@ public class PopularAirports {
         Job job = Job.getInstance(conf, PopularAirports.class.getName());
         job.setJarByClass(PopularAirports.class);
         job.setMapperClass(MyMapper.class);
+        job.setCombinerClass(MyReducer.class);
         job.setReducerClass(MyReducer.class);
 
 // Hello there ZipFileInputFormat!
