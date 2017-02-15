@@ -1,12 +1,12 @@
 /**
  * Copyright 2011 Michael Cutler <m@cotdp.com>
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *	 http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,23 +16,21 @@
 
 package com.cotdp.hadoop;
 
-import java.io.ByteArrayOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
-import java.util.zip.ZipInputStream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * This RecordReader implementation extracts individual files from a ZIP
@@ -40,8 +38,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
  * file name, the "value" is the file contents.
  */
 public class ZipFileRecordReader
-    extends RecordReader<Text, BytesWritable>
-{
+        extends RecordReader<Text, Text> {
     /** InputStream used to read the ZIP file from the FileSystem */
     private FSDataInputStream fsin;
 
@@ -52,89 +49,82 @@ public class ZipFileRecordReader
     private Text currentKey;
 
     /** Uncompressed file contents */
-    private BytesWritable currentValue;
+    private Text currentValue;
 
     /** Used to indicate progress */
     private boolean isFinished = false;
+    private ZipEntry currentEntry;
+    private BufferedReader currentReader;
+    private static final int CHUNK_SIZE = 2 * 512 * 1024;
+    private enum ZipEntryStatus {
+        NONE, CONSUMING, ENDED
+    }
+    private ZipEntryStatus currentStatus = ZipEntryStatus.NONE;
 
     /**
      * Initialise and open the ZIP file from the FileSystem
      */
     @Override
-    public void initialize( InputSplit inputSplit, TaskAttemptContext taskAttemptContext )
-        throws IOException, InterruptedException
-    {
+    public void initialize(InputSplit inputSplit, TaskAttemptContext taskAttemptContext)
+            throws IOException, InterruptedException {
         FileSplit split = (FileSplit) inputSplit;
         Configuration conf = taskAttemptContext.getConfiguration();
         Path path = split.getPath();
-        FileSystem fs = path.getFileSystem( conf );
-        
+        FileSystem fs = path.getFileSystem(conf);
+
         // Open the stream
-        fsin = fs.open( path );
-        zip = new ZipInputStream( fsin );
+        fsin = fs.open(path);
+        zip = new ZipInputStream(fsin);
     }
 
     /**
      * This is where the magic happens, each ZipEntry is decompressed and
      * readied for the Mapper. The contents of each file is held *in memory*
      * in a BytesWritable object.
-     * 
+     *
      * If the ZipFileInputFormat has been set to Lenient (not the default),
      * certain exceptions will be gracefully ignored to prevent a larger job
      * from failing.
      */
     @Override
     public boolean nextKeyValue()
-        throws IOException, InterruptedException
-    {
-        ZipEntry entry = null;
-        try
-        {
-            entry = zip.getNextEntry();
+            throws IOException, InterruptedException {
+        // First step
+        if (currentStatus == ZipEntryStatus.NONE) {
+            stepNext();
+        } else if (currentStatus == ZipEntryStatus.ENDED) {
+            // Step to next zip entry
+            stepNext();
         }
-        catch ( ZipException e )
-        {
-            if ( ZipFileInputFormat.getLenient() == false )
-                throw e;
-        }
-        
         // Sanity check
-        if ( entry == null )
-        {
+        if (currentEntry == null) {
             isFinished = true;
             return false;
         }
-        
-        // Filename
-        currentKey = new Text( entry.getName() );
-        // Read the file contents
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        byte[] temp = new byte[8192 * 1024];
-        int threshold = 1024;
-        // FIXME for large files!!!
-        for ( int i = 0; i < threshold; i++ )
-        {
-            int bytesRead = 0;
-            try
-            {
-                bytesRead = zip.read( temp, 0, 8192 );
-            }
-            catch ( EOFException e )
-            {
-                if ( ZipFileInputFormat.getLenient() == false )
-                    throw e;
-                return false;
-            }
-            if ( bytesRead > 0 )
-                bos.write( temp, 0, bytesRead );
-            else
+        currentKey = new Text(currentEntry.getName());
+        currentStatus = ZipEntryStatus.CONSUMING;
+        // Next Chunk
+        StringBuilder builder = new StringBuilder();
+        String nextLine = null;
+        for (int i = 0; i < CHUNK_SIZE; i++) {
+            nextLine = currentReader.readLine();
+            if (nextLine == null) {
+                currentStatus = ZipEntryStatus.ENDED;
                 break;
+            }
+            builder.append(nextLine);
+            builder.append("\n");
         }
-        zip.closeEntry();
-        
-        // Uncompressed contents
-        currentValue = new BytesWritable( bos.toByteArray() );
+        currentValue = new Text(builder.toString());
         return true;
+    }
+
+    private void stepNext() throws IOException {
+        if (currentEntry != null) {
+            zip.closeEntry();
+        }
+        currentEntry = zip.getNextEntry();
+        currentReader = new BufferedReader(new InputStreamReader(zip));
     }
 
     /**
@@ -142,8 +132,7 @@ public class ZipFileRecordReader
      */
     @Override
     public float getProgress()
-        throws IOException, InterruptedException
-    {
+            throws IOException, InterruptedException {
         return isFinished ? 1 : 0;
     }
 
@@ -152,8 +141,7 @@ public class ZipFileRecordReader
      */
     @Override
     public Text getCurrentKey()
-        throws IOException, InterruptedException
-    {
+            throws IOException, InterruptedException {
         return currentKey;
     }
 
@@ -161,9 +149,8 @@ public class ZipFileRecordReader
      * Returns the current value (contents of the zipped file)
      */
     @Override
-    public BytesWritable getCurrentValue()
-        throws IOException, InterruptedException
-    {
+    public Text getCurrentValue()
+            throws IOException, InterruptedException {
         return currentValue;
     }
 
@@ -172,9 +159,14 @@ public class ZipFileRecordReader
      */
     @Override
     public void close()
-        throws IOException
-    {
-        try { zip.close(); } catch ( Exception ignore ) { }
-        try { fsin.close(); } catch ( Exception ignore ) { }
+            throws IOException {
+        try {
+            zip.close();
+        } catch (Exception ignore) {
+        }
+        try {
+            fsin.close();
+        } catch (Exception ignore) {
+        }
     }
 }

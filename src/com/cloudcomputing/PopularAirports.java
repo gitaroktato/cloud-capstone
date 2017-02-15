@@ -33,11 +33,11 @@ public class PopularAirports {
      * the text and then applies the simple WordCount algorithm.
      */
     public static class MyMapper
-            extends Mapper<Text, BytesWritable, Text, IntWritable> {
+            extends Mapper<Text, Text, Text, IntWritable> {
         private final static IntWritable one = new IntWritable(1);
         private Text word = new Text();
 
-        public void map(Text key, BytesWritable value, Context context)
+        public void map(Text key, Text value, Context context)
                 throws IOException, InterruptedException {
             // NOTE: the filename is the *full* path within the ZIP file
             // e.g. "subdir1/subsubdir2/Ulysses-18.txt"
@@ -45,16 +45,14 @@ public class PopularAirports {
             LOG.info("map: " + filename);
 
             // We only want to process .txt files
-            if (filename.endsWith(".csv") == false)
+            if (!filename.endsWith(".csv"))
                 return;
 
             // Prepare the content
-            String content = new String(value.getBytes(), "UTF-8");
-            //content = content.replaceAll( "[^A-Za-z \n]", "" ).toLowerCase();
 
             // Tokenize the content
             Pattern.compile("\n", Pattern.MULTILINE)
-                    .splitAsStream(content)
+                    .splitAsStream(value.toString())
                     .map(line -> line.split(","))
                     .filter( tokens -> tokens.length >= 18)
                     .forEach(tokens -> {
