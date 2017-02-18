@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="cloud-capstone">
+    <output-path>$PROJECT_DIR$/out/artifacts/cloud_capstone</output-path>
+    <root id="archive" name="cloud-capstone.jar">
+      <element id="module-output" name="cloud-capstone" />
+    </root>
+  </artifact>
+</component>
