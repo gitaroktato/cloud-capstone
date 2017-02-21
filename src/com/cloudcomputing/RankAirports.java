@@ -7,7 +7,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.TestComparators;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -30,19 +33,19 @@ public class RankAirports {
 
 
     public static class MyMapper
-            extends Mapper<Object, Text, IntWritable, Text> {
+            extends Mapper<Object, Text, LongWritable, Text> {
 
         public void map(Object key, Text line, Context context)
                 throws IOException, InterruptedException {
             String[] results = line.toString().split("\\s");
-            context.write(new IntWritable(
-                    Integer.parseInt(results[1])), new Text(results[0]));
+            context.write(new LongWritable(
+                    Long.parseLong(results[results.length - 1])), new Text(results[0]));
         }
     }
 
     public static class MyReducer
-            extends Reducer<IntWritable, Text, IntWritable, Text> {
-        public void reduce(IntWritable key, Iterable<Text> values, Context context)
+            extends Reducer<LongWritable, Text, LongWritable, Text> {
+        public void reduce(LongWritable key, Iterable<Text> values, Context context)
                 throws IOException, InterruptedException {
             context.write(key, values.iterator().next());
         }
@@ -57,9 +60,11 @@ public class RankAirports {
         job.setMapperClass(MyMapper.class);
         job.setCombinerClass(MyReducer.class);
         job.setReducerClass(MyReducer.class);
+        //
+        job.setSortComparatorClass(LongWritable.DecreasingComparator.class);
 
 // The output files will contain "Word [TAB] Count"
-        job.setOutputKeyClass(IntWritable.class);
+        job.setOutputKeyClass(LongWritable.class);
         job.setOutputValueClass(Text.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
