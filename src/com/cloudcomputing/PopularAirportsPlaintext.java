@@ -9,7 +9,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-import static com.cloudcomputing.OntimePerformanceMetadata.*;
+import static com.cloudcomputing.OnTimePerformanceMetadata.*;
 import java.io.IOException;
 import java.util.stream.Stream;
 

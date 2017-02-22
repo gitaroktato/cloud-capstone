@@ -1,8 +1,6 @@
 package com.cloudcomputing;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
@@ -18,7 +16,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.stream.Stream;
-import static com.cloudcomputing.OntimePerformanceMetadata.*;
+import static com.cloudcomputing.OnTimePerformanceMetadata.*;
 /**
  * This uses airline_ontime data to determine on-time departure performance by airports
  */
@@ -28,6 +26,9 @@ public class OnTimeDepartureByAirports {
 
         private String airport;
         private String carrier;
+
+        public AirportCarrierWritable() {
+        }
 
         @Override
         public void readFields(DataInput in) throws IOException {
@@ -50,12 +51,34 @@ public class OnTimeDepartureByAirports {
             return carrier.compareTo(other.carrier);
         }
 
+        @Override
+        public String toString() {
+            return airport + ' ' + carrier;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            AirportCarrierWritable that = (AirportCarrierWritable) o;
+
+            if (airport != null ? !airport.equals(that.airport) : that.airport != null) return false;
+            return carrier != null ? carrier.equals(that.carrier) : that.carrier == null;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = airport != null ? airport.hashCode() : 0;
+            result = 31 * result + (carrier != null ? carrier.hashCode() : 0);
+            return result;
+        }
     }
 
     public static class MyMapper
-            extends Mapper<Object, Text, Text, DoubleWritable> {
-        private Text carrierId = new Text();
-        private DoubleWritable arrivalDelay = new DoubleWritable();
+            extends Mapper<Object, Text, AirportCarrierWritable, DoubleWritable> {
+        private AirportCarrierWritable airportAndCarrier = new AirportCarrierWritable();
+        private DoubleWritable departureDelay = new DoubleWritable();
 
         public void map(Object key, Text value, Context context)
                 throws IOException, InterruptedException {
@@ -63,18 +86,21 @@ public class OnTimeDepartureByAirports {
             // Tokenize the content
             Stream.of(value.toString())
                     .map(line -> line.split(","))
-                    .filter(tokens -> tokens.length >= ARRIVAL_DELAY)
+                    .filter(tokens -> tokens.length >= DEPARTURE_DELAY)
                     .forEach(tokens -> {
                         try {
                             String carrierValue = tokens[CARRIER_ID].replaceAll("\"", "");
-                            String delayValue = tokens[ARRIVAL_DELAY].replaceAll("\"", "");
+                            String airportValue = tokens[ORIGIN_AIRPORT].replaceAll("\"", "");
+                            String delayValue = tokens[DEPARTURE_DELAY].replaceAll("\"", "");
                             // Skip empty values
                             if (delayValue.isEmpty()) {
                                 return;
                             }
-                            carrierId.set(carrierValue);
-                            arrivalDelay.set(Double.parseDouble(delayValue));
-                            context.write(carrierId, arrivalDelay);
+                            airportAndCarrier.airport = airportValue;
+                            airportAndCarrier.carrier = carrierValue;
+
+                            departureDelay.set(Double.parseDouble(delayValue));
+                            context.write(airportAndCarrier, departureDelay);
                         } catch (Exception e) {
                             System.err.println(e);
                         }
@@ -86,8 +112,8 @@ public class OnTimeDepartureByAirports {
      * Reducer for the ZipFile test, identical to the standard WordCount example
      */
     public static class MyReducer
-            extends Reducer<Text, DoubleWritable, Text, Text> {
-        public void reduce(Text key, Iterable<DoubleWritable> values, Context context)
+            extends Reducer<AirportCarrierWritable, DoubleWritable, AirportCarrierWritable, Text> {
+        public void reduce(AirportCarrierWritable key, Iterable<DoubleWritable> values, Context context)
                 throws IOException, InterruptedException {
             double sum = 0;
             int count = 0;
@@ -111,7 +137,7 @@ public class OnTimeDepartureByAirports {
         job.setReducerClass(MyReducer.class);
 
         job.setMapOutputValueClass(DoubleWritable.class);
-        job.setOutputKeyClass(Text.class);
+        job.setOutputKeyClass(AirportCarrierWritable.class);
         job.setOutputValueClass(Text.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
