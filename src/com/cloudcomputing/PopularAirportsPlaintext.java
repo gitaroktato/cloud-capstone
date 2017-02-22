@@ -1,44 +1,27 @@
 package com.cloudcomputing;
 
 
-import com.cotdp.hadoop.ZipFileInputFormat;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
+import static com.cloudcomputing.OntimePerformanceMetadata.*;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 /**
  * This uses airline_ontime data to sum origin-destination airports
  */
 public class PopularAirportsPlaintext {
 
-    private static final Log LOG = LogFactory.getLog(PopularAirportsPlaintext.class);
 
-
-    /**
-     * This Mapper class checks the filename ends with the .txt extension, cleans
-     * the text and then applies the simple WordCount algorithm.
-     */
-    public static class MyMapper
-            extends Mapper<Object, Text, Text, LongWritable> {
+    public static class Mapper
+            extends org.apache.hadoop.mapreduce.Mapper<Object, Text, Text, LongWritable> {
         private final static LongWritable one = new LongWritable(1);
-        public static final int ORIGIN_AT = 11;
-        public static final int DESTINATION_AT = 18;
         private Text word = new Text();
 
         public void map(Object key, Text value, Context context)
@@ -47,18 +30,18 @@ public class PopularAirportsPlaintext {
             // Tokenize the content
             Stream.of(value.toString())
                     .map(line -> line.split(","))
-                    .filter(tokens -> tokens.length >= DESTINATION_AT)
+                    .filter(tokens -> tokens.length >= DESTINATION_AIRPORT)
                     .forEach(tokens -> {
                         // FROM
-                        word.set(tokens[ORIGIN_AT]);
                         try {
+                            word.set(tokens[ORIGIN_AIRPORT].replaceAll("\"", ""));
                             context.write(word, one);
                         } catch (Exception e) {
                             System.err.println(e);
                         }
                         // TO
-                        word.set(tokens[DESTINATION_AT]);
                         try {
+                            word.set(tokens[DESTINATION_AIRPORT].replaceAll("\"", ""));
                             context.write(word, one);
                         } catch (Exception e) {
                             System.err.println(e);
@@ -67,11 +50,8 @@ public class PopularAirportsPlaintext {
         }
     }
 
-    /**
-     * Reducer for the ZipFile test, identical to the standard WordCount example
-     */
-    public static class MyReducer
-            extends Reducer<Text, LongWritable, Text, LongWritable> {
+    public static class Reducer
+            extends org.apache.hadoop.mapreduce.Reducer<Text, LongWritable, Text, LongWritable> {
         public void reduce(Text key, Iterable<LongWritable> values, Context context)
                 throws IOException, InterruptedException {
             int sum = 0;
@@ -85,12 +65,12 @@ public class PopularAirportsPlaintext {
 
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
-        // Standard stuff
+
         Job job = Job.getInstance(conf, PopularAirportsPlaintext.class.getName());
         job.setJarByClass(PopularAirportsPlaintext.class);
-        job.setMapperClass(MyMapper.class);
-        job.setCombinerClass(MyReducer.class);
-        job.setReducerClass(MyReducer.class);
+        job.setMapperClass(Mapper.class);
+        job.setCombinerClass(Reducer.class);
+        job.setReducerClass(Reducer.class);
 
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(LongWritable.class);

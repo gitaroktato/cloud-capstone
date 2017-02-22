@@ -6,24 +6,51 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.stream.Stream;
 import static com.cloudcomputing.OntimePerformanceMetadata.*;
-
 /**
- * This uses airline_ontime data to sum average on-time arrival times.
+ * This uses airline_ontime data to determine on-time departure performance by airports
  */
-public class AverageDelays {
+public class OnTimeDepartureByAirports {
 
-    private static final Log LOG = LogFactory.getLog(AverageDelays.class);
+    public static class AirportCarrierWritable implements WritableComparable<AirportCarrierWritable> {
+
+        private String airport;
+        private String carrier;
+
+        @Override
+        public void readFields(DataInput in) throws IOException {
+            airport = in.readUTF();
+            carrier = in.readUTF();
+        }
+
+        @Override
+        public void write(DataOutput out) throws IOException {
+            out.writeUTF(airport);
+            out.writeUTF(carrier);
+        }
+
+        @Override
+        public int compareTo(AirportCarrierWritable other) {
+            int airportComparison = airport.compareTo(other.airport);
+            if (airportComparison != 0) {
+                return airportComparison;
+            }
+            return carrier.compareTo(other.carrier);
+        }
+
+    }
 
     public static class MyMapper
             extends Mapper<Object, Text, Text, DoubleWritable> {
@@ -77,8 +104,8 @@ public class AverageDelays {
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
         // Standard stuff
-        Job job = Job.getInstance(conf, AverageDelays.class.getName());
-        job.setJarByClass(AverageDelays.class);
+        Job job = Job.getInstance(conf, OnTimeDepartureByAirports.class.getName());
+        job.setJarByClass(OnTimeDepartureByAirports.class);
         job.setMapperClass(MyMapper.class);
         //job.setCombinerClass(Reducer.class);
         job.setReducerClass(MyReducer.class);
