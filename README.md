@@ -38,12 +38,15 @@ Aircraft Types  Carrier Decode  Master Coordinate
 # Mounting to VirtualBox
 ```
 sudo mount -t vboxsf transportation /transportation
+fdisk /dev/sdb
+mkfs -t ext4 /dev/sdb
+mount /dev/sdb
 ```
 
 # Uploading data to HDFS
 ```
-sudo -u hdfs hadoop fs -mkdir /user/hive/warehouse/transportation
-sudo -u hdfs hadoop fs -copyFromLocal ~/transportation/*.zip /user/hive/warehouse/transportation
+export HADOOP_HOME=~/hadoop-2.7.3
+~/IdeaProjects/cloud-capstone/migration/move-to-hadoop.sh ~/aviation/ /user/sniper/origin_dest
 ```
 
 # Loading data with hive
@@ -81,4 +84,24 @@ HBase: HBase 1.2.3 with Ganglia 3.7.2, Hadoop 2.7.3, Hive 2.1.1, Hue 3.11.0, Pho
 Presto: Presto 0.152.3 with Hadoop 2.7.3 HDFS and Hive 2.1.1 Metastore
 
 Spark: Spark 2.1.0 on Hadoop 2.7.3 YARN with Ganglia 3.7.2 and Zeppelin 0.6.2
+```
+# Data Cleaning
+```
+~/IdeaProjects/cloud-capstone/migration/move-ontime-perf-to-hadoop.sh ~/aviation/ /user/sniper/ontime_perf
+```
+
+# Getting top ten airports by Spark
+```
+file = sc.textFile('hdfs://localhost:9000/user/sniper/popular_unranked_2/part-r-00000')
+rdd = file.cache()
+rdd.map(lambda line: line.split()).filter(lambda tuple: len(tuple) == 2).filter(lambda tuple: len(tuple[0]) == 3).map(lambda tuple: (int(tuple[1]), tuple[0])).sortByKey(ascending=False).take(10)
+```
+
+# Getting the top ten carriers by arrival time
+```
+file = sc.textFile('hdfs://localhost:9000/user/sniper/popular_unranked_2/part-r-00000')
+rdd = file.cache()
+rdd = rdd.map(lambda line: line.split()).cache()
+rdd2 = rdd.map(lambda tuple: (float(tuple[1]), tuple[0])).cache()
+rdd2.takeOrdered(10)
 ```
