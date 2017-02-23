@@ -13,13 +13,11 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.IOException;
 import java.util.stream.Stream;
-
 import static com.cloudcomputing.OnTimePerformanceMetadata.*;
-
 /**
  * This uses airline_ontime data to determine on-time departure performance by airports
  */
-public class OnTimeDepartureByAirports {
+public class OnTimeDepartureByCarriers {
 
     public static class MyMapper
             extends Mapper<Object, Text, TupleTextWritable, DoubleWritable> {
@@ -35,15 +33,15 @@ public class OnTimeDepartureByAirports {
                     .filter(tokens -> tokens.length >= DEPARTURE_DELAY)
                     .forEach(tokens -> {
                         try {
-                            String originAirportValue = tokens[ORIGIN_AIRPORT].replaceAll("\"", "");
-                            String destAirportValue = tokens[DESTINATION_AIRPORT].replaceAll("\"", "");
+                            String carrierValue = tokens[CARRIER_ID].replaceAll("\"", "");
+                            String airportValue = tokens[ORIGIN_AIRPORT].replaceAll("\"", "");
                             String delayValue = tokens[DEPARTURE_DELAY].replaceAll("\"", "");
                             // Skip empty values
                             if (delayValue.isEmpty()) {
                                 return;
                             }
-                            airportAndCarrier.setFirstKey(originAirportValue);
-                            airportAndCarrier.setSecondKey(destAirportValue);
+                            airportAndCarrier.setFirstKey(airportValue);
+                            airportAndCarrier.setSecondKey(carrierValue);
 
                             departureDelay.set(Double.parseDouble(delayValue));
                             context.write(airportAndCarrier, departureDelay);
@@ -53,7 +51,7 @@ public class OnTimeDepartureByAirports {
                     });
         }
     }
-    
+
     public static class MyReducer
             extends Reducer<TupleTextWritable, DoubleWritable, TupleTextWritable, Text> {
         public void reduce(TupleTextWritable key, Iterable<DoubleWritable> values, Context context)
@@ -73,8 +71,8 @@ public class OnTimeDepartureByAirports {
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
         // Standard stuff
-        Job job = Job.getInstance(conf, OnTimeDepartureByAirports.class.getName());
-        job.setJarByClass(OnTimeDepartureByAirports.class);
+        Job job = Job.getInstance(conf, OnTimeDepartureByCarriers.class.getName());
+        job.setJarByClass(OnTimeDepartureByCarriers.class);
         job.setMapperClass(MyMapper.class);
         //job.setCombinerClass(Reducer.class);
         job.setReducerClass(MyReducer.class);
