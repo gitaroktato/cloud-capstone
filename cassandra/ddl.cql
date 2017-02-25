@@ -11,3 +11,9 @@ create table aviation.airport_airport_departure (
   dep_delay decimal,
   PRIMARY KEY(airport, dep_delay, airport_to)
 );
+create table aviation.airport_airport_arrival (
+  airport text,
+  airport_to text,
+  arr_delay decimal,
+  PRIMARY KEY(airport, airport_to)
+);

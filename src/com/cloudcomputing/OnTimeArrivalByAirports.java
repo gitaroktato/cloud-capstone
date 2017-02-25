@@ -37,7 +37,7 @@ public class OnTimeArrivalByAirports {
                         try {
                             String originAirportValue = tokens[ORIGIN_AIRPORT].replaceAll("\"", "");
                             String destAirportValue = tokens[DESTINATION_AIRPORT].replaceAll("\"", "");
-                            String delayValue = tokens[DEPARTURE_DELAY].replaceAll("\"", "");
+                            String delayValue = tokens[ARRIVAL_DELAY].replaceAll("\"", "");
                             // Skip empty values
                             if (delayValue.isEmpty()) {
                                 return;
