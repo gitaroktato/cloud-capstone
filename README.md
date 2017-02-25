@@ -120,7 +120,6 @@ rdd2.takeOrdered(10)
 
 ```
 ```
-
 file = sc.textFile('hdfs://localhost:9000/user/sniper/departure_by_carriers/part-r-00000')
 rdd = file.map(lambda line: line.split())
 rdd2 = rdd.map(lambda triple: (triple[0], triple[1], float(triple[2])))
@@ -131,5 +130,32 @@ df.write\
     .format("org.apache.spark.sql.cassandra")\
     .mode('append')\
     .options(table="airport_carrier_departure", keyspace="aviation")\
+    .save()
+```
+# Airport: Average delay in minutes
+```
+file = sc.textFile('hdfs://localhost:9000/user/sniper/departure_by_airports/part-r-00000')
+rdd = file.map(lambda line: line.split()).cache()
+rdd = rdd.filter(lambda triple: triple[0] == 'CMI').cache()
+rdd2 = rdd.map(lambda triple: (float(triple[2]), triple[1], triple[0])).cache()
+rdd2.takeOrdered(10)
+```
+# Saving to cassandra
+```
+./bin/pyspark --conf spark.cassandra.connection.host=127.0.0.1 --packages datastax:spark-cassandra-connector:2.0.0-RC1-s_2.11
+
+```
+```
+file = sc.textFile('hdfs://localhost:9000/user/sniper/departure_by_airports/part-r-00000')
+rdd = file.map(lambda line: line.split())
+rdd = rdd.filter(lambda triple: len(triple) == 3).filter(lambda triple: len(triple[0]) == 3).filter(lambda triple: len(triple[1]) == 3)
+rdd2 = rdd.map(lambda triple: (triple[0], triple[1], float(triple[2])))
+from pyspark.sql import Row
+rdd3 = rdd2.map(lambda row: Row(airport=row[0], airport_to=row[1], dep_delay=row[2]))
+df = spark.createDataFrame(rdd3)
+df.write\
+    .format("org.apache.spark.sql.cassandra")\
+    .mode('append')\
+    .options(table="airport_airport_departure", keyspace="aviation")\
     .save()
 ```
