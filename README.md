@@ -190,3 +190,15 @@ df.write\
     .options(table="airport_airport_arrival", keyspace="aviation")\
     .save()
 ```
+# Travel planner for 2008
+Data cleaning
+```
+bin/hadoop jar ~/IdeaProjects/cloud-capstone/out/artifacts/cloud_capstone/cloud-capstone.jar com.cloudcomputing.AllFlightsWithDepartureAndArrivalDelay ontime_perf/*2008*.csv flight_stats_2008
+```
+```
+file = sc.textFile('hdfs://localhost:9000/user/sniper/ontime_perf/*2008*.csv')
+rdd = file.filter(lambda line: '2008-03-04' in line and 'CMI' in line and 'ORD' in line)
+rdd.cache()
+rdd2 = rdd.map(lambda line: line.split(',')).filter(lambda array: array[5] == '2008-03-04' and array[11] == '"CMI"' and array[18] == '"ORD"')
+rdd2.cache()
+```
