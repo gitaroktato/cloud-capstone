@@ -113,8 +113,8 @@ rdd2.takeOrdered(10)
 ```
 file = sc.textFile('hdfs://localhost:9000/user/sniper/departure_by_carriers/part-r-00000')
 rdd = file.map(lambda line: line.split()).cache()
-rdd = rdd.filter(lambda triple: triple[0] == 'CMI').cache()
-rdd2 = rdd.map(lambda triple: (float(triple[2]), triple[1], triple[0])).cache()
+rdd = rdd.filter(lambda tuple: tuple[0] == 'CMI').cache()
+rdd2 = rdd.map(lambda tuple: (float(tuple[2]), tuple[1], tuple[0])).cache()
 rdd2.takeOrdered(10)
 ```
 
@@ -126,7 +126,7 @@ rdd2.takeOrdered(10)
 ```
 file = sc.textFile('hdfs://localhost:9000/user/sniper/departure_by_carriers/part-r-00000')
 rdd = file.map(lambda line: line.split())
-rdd2 = rdd.map(lambda triple: (triple[0], triple[1], float(triple[2])))
+rdd2 = rdd.map(lambda tuple: (tuple[0], tuple[1], float(tuple[2])))
 from pyspark.sql import Row
 rdd3 = rdd2.map(lambda row: Row(airport=row[0], carrier=row[1], dep_delay=row[2]))
 df = spark.createDataFrame(rdd3)
@@ -140,8 +140,8 @@ df.write\
 ```
 file = sc.textFile('hdfs://localhost:9000/user/sniper/departure_by_airports/part-r-00000')
 rdd = file.map(lambda line: line.split()).cache()
-rdd = rdd.filter(lambda triple: triple[0] == 'CMI').cache()
-rdd2 = rdd.map(lambda triple: (float(triple[2]), triple[1], triple[0])).cache()
+rdd = rdd.filter(lambda tuple: tuple[0] == 'CMI').cache()
+rdd2 = rdd.map(lambda tuple: (float(tuple[2]), tuple[1], tuple[0])).cache()
 rdd2.takeOrdered(10)
 ```
 # Saving to cassandra
@@ -152,8 +152,8 @@ rdd2.takeOrdered(10)
 ```
 file = sc.textFile('hdfs://localhost:9000/user/sniper/departure_by_airports/part-r-00000')
 rdd = file.map(lambda line: line.split())
-rdd = rdd.filter(lambda triple: len(triple) == 3).filter(lambda triple: len(triple[0]) == 3).filter(lambda triple: len(triple[1]) == 3)
-rdd2 = rdd.map(lambda triple: (triple[0], triple[1], float(triple[2])))
+rdd = rdd.filter(lambda tuple: len(tuple) == 3).filter(lambda tuple: len(tuple[0]) == 3).filter(lambda tuple: len(tuple[1]) == 3)
+rdd2 = rdd.map(lambda tuple: (tuple[0], tuple[1], float(tuple[2])))
 from pyspark.sql import Row
 rdd3 = rdd2.map(lambda row: Row(airport=row[0], airport_to=row[1], dep_delay=row[2]))
 df = spark.createDataFrame(rdd3)
@@ -167,8 +167,8 @@ df.write\
 ```
 file = sc.textFile('hdfs://localhost:9000/user/sniper/arrival_by_airports/part-r-00000')
 rdd = file.map(lambda line: line.split())
-rdd2 = rdd.filter(lambda triple: triple[0] == 'CMI' and triple[1] == 'ORD')
-rdd2 = rdd.map(lambda triple: (float(triple[2]), triple[1], triple[0]))
+rdd2 = rdd.filter(lambda tuple: tuple[0] == 'CMI' and tuple[1] == 'ORD')
+rdd2 = rdd.map(lambda tuple: (float(tuple[2]), tuple[1], tuple[0]))
 rdd2.collect()
 ```
 # Saving to cassandra
@@ -179,8 +179,8 @@ rdd2.collect()
 ```
 file = sc.textFile('hdfs://localhost:9000/user/sniper/arrival_by_airports/part-r-00000')
 rdd = file.map(lambda line: line.split())
-rdd = rdd.filter(lambda triple: len(triple) == 3).filter(lambda triple: len(triple[0]) == 3).filter(lambda triple: len(triple[1]) == 3)
-rdd2 = rdd.map(lambda triple: (triple[0], triple[1], float(triple[2])))
+rdd = rdd.filter(lambda tuple: len(tuple) == 3).filter(lambda tuple: len(tuple[0]) == 3).filter(lambda tuple: len(tuple[1]) == 3)
+rdd2 = rdd.map(lambda tuple: (tuple[0], tuple[1], float(tuple[2])))
 from pyspark.sql import Row
 rdd3 = rdd2.map(lambda row: Row(airport=row[0], airport_to=row[1], arr_delay=row[2]))
 df = spark.createDataFrame(rdd3)
@@ -193,12 +193,34 @@ df.write\
 # Travel planner for 2008
 Data cleaning
 ```
-bin/hadoop jar ~/IdeaProjects/cloud-capstone/out/artifacts/cloud_capstone/cloud-capstone.jar com.cloudcomputing.BestFlightOnAGivenDate ontime_perf/*2008*.csv flight_stats_2008
+bin/hadoop jar ~/IdeaProjects/cloud-capstone/out/artifacts/cloud_capstone/cloud-capstone.jar com.cloudcomputing.BestFlightOnAGivenDate ontime_perf/*2008*.csv best_flights_2008
 ```
 ```
-file = sc.textFile('hdfs://localhost:9000/user/sniper/flight_stats_2008/part-r-00000')
-rdd = file.filter(lambda line: '2008-03-04' in line and 'CMI' in line and 'ORD' in line)
-rdd.cache()
-rdd2 = rdd.map(lambda line: line.split()).filter(lambda array: array[0] == 'CMI' and array[1] == 'ORD')
-rdd2.cache()
+def get_best_flight(catalog, from_airport, to_airport, date, am_or_pm):
+    line = catalog.filter(lambda line: from_airport in line
+                                       and to_airport in line
+                                       and date in line
+                                       and am_or_pm in line).first()
+    tuple = line.split()
+    return tuple[4:]
+
+
+data_catalog = 'hdfs://localhost:9000/user/sniper/best_flights_2008/part-r-00000'
+catalog = sc.textFile(data_catalog).cache()
+best_am = get_best_flight(catalog, 'SLC', 'BFL', '2008-01-04', 'AM')
+```
+Saving to Cassandra
+```
+data_catalog = 'hdfs://localhost:9000/user/sniper/best_flights_2008/part-r-00000'
+catalog = sc.textFile(data_catalog).cache()
+rdd = catalog.map(lambda line: line.split())
+rdd2 = rdd.map(lambda tuple: (tuple[0], tuple[1], tuple[2], tuple[3], tuple[4], tuple[5], tuple[6], float(tuple[7])))
+from pyspark.sql import Row
+rdd3 = rdd2.map(lambda row: Row(airport_from=row[0], airport_to=row[1], given_date=row[2], am_or_pm=row[3], carrier=row[4], flight_num=row[5], departure_time=row[6], arr_delay=row[7])).cache()
+df = spark.createDataFrame(rdd3)
+df.write\
+    .format("org.apache.spark.sql.cassandra")\
+    .mode('append')\
+    .options(table="best_flights_2008", keyspace="aviation")\
+    .save()
 ```
