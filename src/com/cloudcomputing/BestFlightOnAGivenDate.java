@@ -96,7 +96,7 @@ public class BestFlightOnAGivenDate {
     }
 
     public static class CompoundValueWritable
-            implements WritableComparable<CompoundValueWritable> {
+            implements WritableComparable<CompoundValueWritable>, Cloneable {
 
         private String carrierId;
         private String flightNum;
@@ -140,6 +140,16 @@ public class BestFlightOnAGivenDate {
         @Override
         public String toString() {
             return String.join(" ", carrierId, flightNum, departureTime, arrivalDelay);
+        }
+
+        @Override
+        public Object clone() {
+            try {
+                return super.clone();
+            } catch (CloneNotSupportedException e) {
+                // Should not reach here
+                return null;
+            }
         }
     }
 
@@ -214,9 +224,11 @@ public class BestFlightOnAGivenDate {
             CompoundValueWritable minimum = null;
             for (CompoundValueWritable value : values) {
                 if (minimum == null) {
-                    minimum = value;
+                    // 
+                    minimum = (CompoundValueWritable) value.clone();
                 } else {
-                    minimum = getValueWithMinimumArrivalTime(minimum, value);
+                    minimum = (CompoundValueWritable) getValueWithMinimumArrivalTime(
+                            minimum, value).clone();
                 }
             }
             context.write(key, minimum);
