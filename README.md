@@ -103,7 +103,7 @@ rdd.map(lambda line: line.split()).filter(lambda tuple: len(tuple) == 2).filter(
 
 # Getting the top ten carriers by arrival time
 ```
-file = sc.textFile('hdfs://localhost:9000/user/sniper/popular_unranked_2/part-r-00000')
+file = sc.textFile('hdfs://localhost:9000/user/sniper/avg_delays/part-r-00000')
 rdd = file.cache()
 rdd = rdd.map(lambda line: line.split()).cache()
 rdd2 = rdd.map(lambda tuple: (float(tuple[1]), tuple[0])).cache()
