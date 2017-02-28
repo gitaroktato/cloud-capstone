@@ -50,3 +50,69 @@ Migrating to Apache Cassandra is done by using Spark Cassandra Connector. This a
 ### References
 * [Spark Cassandra Connector](https://github.com/datastax/spark-cassandra-connector)
 * [PySpark with Spark Cassandra Connector](https://github.com/datastax/spark-cassandra-connector/blob/master/doc/15_python.md)
+
+# Solution Approach
+## Question 1.1
+_Rank the top 10 most popular airports by numbers of flights to/from the airport._
+
+A map-reduce job collects all the from-to airport field from `airline_ontime` data and counts each airport. This is very similar to the well-known Word Count example in Hadoop documentation.
+
+<..., line> -> **map()** -> <airport_id, 1> -> **reduce()** -> <airport_id, occurrence>
+
+Map-Reduce execution is done by the following command.
+
+```bash
+bin/hadoop jar ~/IdeaProjects/cloud-capstone/out/artifacts/cloud_capstone/cloud-capstone.jar com.cloudcomputing.PopularAirportsPlaintext ontime_perf popular_airports
+```
+
+As result we get one file with airports in alphabetical order.
+```
+ABE	236094
+ABI	39323
+ABQ	1428081
+...
+```
+
+
+This file is sorted and trimmed using `PySpark`
+```
+file = sc.textFile('hdfs://localhost:9000/user/ec2-user/popular_airports/part-r-00000')
+rdd = file.cache()
+rdd.map(lambda line: line.split()).filter(lambda tuple: len(tuple) == 2).filter(lambda tuple: len(tuple[0]) == 3).map(lambda tuple: (int(tuple[1]), tuple[0])).sortByKey(ascending=False).take(10)
+```
+### References
+[Map-Reduce job](https://github.com/gitaroktato/cloud-capstone/blob/master/src/com/cloudcomputing/PopularAirportsPlaintext.java)
+
+
+## Question 1.2
+_Rank the top 10 airlines by on-time arrival performance._
+
+The solution is similar to the previous. We get each carrier and it's arrival delay field. Then at the reduce phase we calculate the average arrival delay for each carrier.
+
+<..., line> -> **map()** -> <carrier_id, arrival_delay> -> **reduce()** -> <carrier_id, average_arrival_delay>
+
+Map-Reduce execution is done by the following command.
+
+```bash
+bin/hadoop jar ~/IdeaProjects/cloud-capstone/out/artifacts/cloud_capstone/cloud-capstone.jar com.cloudcomputing.AverageDelays ontime_perf avg_delays
+```
+
+As result we get one file with carriers in alphabetical order.
+```
+9E	5.87
+AA	7.11
+AL	8.29
+...
+```
+
+This file is then sorted and trimmed using `PySpark`
+```
+file = sc.textFile('hdfs://localhost:9000/user/ec2-user/avg_delays/part-r-00000')
+rdd = file.cache()
+rdd = rdd.map(lambda line: line.split()).cache()
+rdd2 = rdd.map(lambda tuple: (float(tuple[1]), tuple[0])).cache()
+rdd2.takeOrdered(10)
+```
+
+### References
+[Map-Reduce job](https://github.com/gitaroktato/cloud-capstone/blob/master/src/com/cloudcomputing/AverageDelays.java)
