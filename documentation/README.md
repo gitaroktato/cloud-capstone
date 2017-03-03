@@ -116,3 +116,168 @@ rdd2.takeOrdered(10)
 
 ### References
 [Map-Reduce job](https://github.com/gitaroktato/cloud-capstone/blob/master/src/com/cloudcomputing/AverageDelays.java)
+
+## Question 2.1
+_For each airport X, rank the top-10 carriers in decreasing order of on-time departure performance from X._
+
+For this calculation, the map-reduce jobs will use a custom compound key, that's composed from airport ID and carrier ID.
+Map jobs will emit each **<airport,carrier>** key pair's on-time departure performance and reduce jobs will calculate average for each **<airport,carrier>** key pair.
+
+<..., line> -> **map()** -> <(airport_id, carrier_id), departure_delay> -> **reduce()** -> <(airport_id, carrier_id), average_departure_delay>
+
+Map-Reduce execution is done by the following command.
+
+```bash
+bin/hadoop jar ~/IdeaProjects/cloud-capstone/out/artifacts/cloud_capstone/cloud-capstone.jar com.cloudcomputing.OnTimeDepartureByCarriers ontime_perf departure_by_carriers
+```
+
+As result we get one file with airports and carriers in alphabetical order. Each value represents the on-time departure average for that airport-carrier pair.
+
+```
+ABE 9E	6.75
+ABE AA	4.76
+ABE AL	3.63
+ABE DH	5.34
+ABE DL	23.28
+...
+```
+
+This file is then sorted using `PySpark`
+```
+file = sc.textFile('hdfs://localhost:9000/user/ec2-user/departure_by_carriers/part-r-00000')
+rdd = file.map(lambda line: line.split()).cache()
+rdd = rdd.filter(lambda tuple: tuple[0] == 'CMI').cache()
+rdd2 = rdd.map(lambda tuple: (float(tuple[2]), tuple[1], tuple[0])).cache()
+rdd2.takeOrdered(10)
+```
+
+Saving to Cassandra is done by using the spark-cassandra-connector package. We have to mark this dependency, when starting up PySpark
+
+```bash
+./bin/pyspark --conf spark.cassandra.connection.host=<CASSANDRA_HOST> --packages datastax:spark-cassandra-connector:2.0.0-RC1-s_2.11
+```
+
+PySpark command, that loads results and then moves to Cassandra node.
+
+```
+file = sc.textFile('hdfs://localhost:9000/user/sniper/departure_by_carriers/part-r-00000')
+rdd = file.map(lambda line: line.split())
+rdd2 = rdd.map(lambda tuple: (tuple[0], tuple[1], float(tuple[2])))
+from pyspark.sql import Row
+rdd3 = rdd2.map(lambda row: Row(airport=row[0], carrier=row[1], dep_delay=row[2]))
+df = spark.createDataFrame(rdd3)
+df.write\
+    .format("org.apache.spark.sql.cassandra")\
+    .mode('append')\
+    .options(table="airport_carrier_departure", keyspace="aviation")\
+    .save()
+```
+
+Cassandra table any keyspace definition is the following
+
+```sql
+create keyspace aviation WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1 };
+create table aviation.airport_carrier_departure (
+  airport text,
+  carrier text,
+  dep_delay decimal,
+  PRIMARY KEY(airport, dep_delay, carrier)
+);
+```
+
+Using the table to determine top performer can be done with this CQL command
+
+```
+select * from aviation.airport_carrier_departure where airport = 'MIA' order by dep_delay limit 3;
+
+ airport | dep_delay | carrier
+---------+-----------+---------
+     MIA |      -3.0 |      9E
+     MIA |       1.2 |      EV
+     MIA |       1.3 |      RU
+
+(3 rows)
+```
+
+### References
+[Map-Reduce job](https://github.com/gitaroktato/cloud-capstone/blob/master/src/com/cloudcomputing/OnTimeDepartureByCarriers.java)
+
+## Question 2.2
+_For each airport X, rank the top-10 airports in decreasing order of on-time departure performance from X._
+
+This is very similar to solution to Question 2.1. Here the compound key consists origin and destination airport.
+
+<..., line> -> **map()** -> <(airport_from, airport_to), departure_delay> -> **reduce()** -> <(airport_from, airport_to), average_departure_delay>
+
+Map-Reduce execution is done by the following command.
+
+```bash
+bin/hadoop jar ~/IdeaProjects/cloud-capstone/out/artifacts/cloud_capstone/cloud-capstone.jar com.cloudcomputing.OnTimeDepartureByAirports ontime_perf departure_by_airports
+```
+
+Sample from map-reduce result
+
+```
+ABE ALB	10.00
+ABE ATL	10.03
+ABE AVP	3.44
+ABE AZO	241.00
+ABE BDL	0.00
+...
+```
+
+This file is then sorted using `PySpark`
+```
+file = sc.textFile('hdfs://localhost:9000/user/sniper/departure_by_airports/part-r-00000')
+rdd = file.map(lambda line: line.split()).cache()
+rdd = rdd.filter(lambda tuple: tuple[0] == 'CMI').cache()
+rdd2 = rdd.map(lambda tuple: (float(tuple[2]), tuple[1], tuple[0])).cache()
+rdd2.takeOrdered(10)
+```
+
+PySpark command, that loads results and then moves to Cassandra node.
+
+```
+file = sc.textFile('hdfs://localhost:9000/user/ec2-user/departure_by_airports/part-r-00000')
+rdd = file.map(lambda line: line.split())
+rdd = rdd.filter(lambda tuple: len(tuple) == 3).filter(lambda tuple: len(tuple[0]) == 3).filter(lambda tuple: len(tuple[1]) == 3)
+rdd2 = rdd.map(lambda tuple: (tuple[0], tuple[1], float(tuple[2])))
+from pyspark.sql import Row
+rdd3 = rdd2.map(lambda row: Row(airport=row[0], airport_to=row[1], dep_delay=row[2]))
+df = spark.createDataFrame(rdd3)
+df.write\
+    .format("org.apache.spark.sql.cassandra")\
+    .mode('append')\
+    .options(table="airport_airport_departure", keyspace="aviation")\
+    .save()
+```
+
+
+Cassandra table any keyspace definition is the following
+
+```sql
+create table aviation.airport_airport_departure (
+  airport text,
+  airport_to text,
+  dep_delay decimal,
+  PRIMARY KEY(airport, dep_delay, airport_to)
+);
+```
+
+CQL query example
+
+```sql
+select * from aviation.airport_airport_departure where airport = 'LAX' order by dep_delay limit 3;
+
+ airport | dep_delay | airport_to
+---------+-----------+------------
+     LAX |     -16.0 |        SDF
+     LAX |      -7.0 |        IDA
+     LAX |      -6.0 |        DRO
+
+(3 rows)
+```
+
+## Question 2.4
+
+_For each source-destination pair X-Y, determine the mean arrival delay (in minutes) for a flight from X to Y._
