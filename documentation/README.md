@@ -160,7 +160,7 @@ Saving to Cassandra is done by using the spark-cassandra-connector package. We h
 PySpark command, that loads results and then moves to Cassandra node.
 
 ```
-file = sc.textFile('hdfs://localhost:9000/user/sniper/departure_by_carriers/part-r-00000')
+file = sc.textFile('hdfs://localhost:9000/user/ec2-user/departure_by_carriers/part-r-00000')
 rdd = file.map(lambda line: line.split())
 rdd2 = rdd.map(lambda tuple: (tuple[0], tuple[1], float(tuple[2])))
 from pyspark.sql import Row
@@ -173,7 +173,7 @@ df.write\
     .save()
 ```
 
-Cassandra table any keyspace definition is the following
+Cassandra table definition is the following
 
 ```sql
 create keyspace aviation WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1 };
@@ -228,7 +228,7 @@ ABE BDL	0.00
 
 This file is then sorted using `PySpark`
 ```
-file = sc.textFile('hdfs://localhost:9000/user/sniper/departure_by_airports/part-r-00000')
+file = sc.textFile('hdfs://localhost:9000/user/ec2-user/departure_by_airports/part-r-00000')
 rdd = file.map(lambda line: line.split()).cache()
 rdd = rdd.filter(lambda tuple: tuple[0] == 'CMI').cache()
 rdd2 = rdd.map(lambda tuple: (float(tuple[2]), tuple[1], tuple[0])).cache()
@@ -252,8 +252,7 @@ df.write\
     .save()
 ```
 
-
-Cassandra table any keyspace definition is the following
+Cassandra table definition is the following
 
 ```sql
 create table aviation.airport_airport_departure (
@@ -278,6 +277,180 @@ select * from aviation.airport_airport_departure where airport = 'LAX' order by 
 (3 rows)
 ```
 
+### References
+[Map-Reduce job](https://github.com/gitaroktato/cloud-capstone/blob/master/src/com/cloudcomputing/OnTimeDepartureByAirports.java)
+
+
 ## Question 2.4
 
 _For each source-destination pair X-Y, determine the mean arrival delay (in minutes) for a flight from X to Y._
+
+This is very similar to solution to Question 2.2. Here the compound value consists arrival delay instead of departure delay.
+
+<..., line> -> **map()** -> <(airport_from, airport_to), arrival_delay> -> **reduce()** -> <(airport_from, airport_to), average_arrival_delay>
+
+
+Map-Reduce execution is done by the following command.
+
+```bash
+bin/hadoop jar ~/IdeaProjects/cloud-capstone/out/artifacts/cloud_capstone/cloud-capstone.jar com.cloudcomputing.OnTimeArrivalByAirports ontime_perf arrival_by_airports
+```
+
+Sample from map-reduce result
+
+```
+ABE ALB	23.00
+ABE ATL	7.65
+ABE AVP	2.35
+ABE BDL	1.00
+ABE BHM	-3.00
+...
+```
+
+This file is then sorted using `PySpark`
+```
+file = sc.textFile('hdfs://localhost:9000/user/ec2-user/arrival_by_airports/part-r-00000')
+rdd = file.map(lambda line: line.split())
+rdd2 = rdd.filter(lambda tuple: tuple[0] == 'CMI' and tuple[1] == 'ORD')
+rdd2 = rdd.map(lambda tuple: (float(tuple[2]), tuple[1], tuple[0]))
+rdd2.collect()
+```
+
+PySpark command, that loads results and then moves to Cassandra node.
+
+```
+file = sc.textFile('hdfs://localhost:9000/user/ec2-user/arrival_by_airports/part-r-00000')
+rdd = file.map(lambda line: line.split())
+rdd = rdd.filter(lambda tuple: len(tuple) == 3).filter(lambda tuple: len(tuple[0]) == 3).filter(lambda tuple: len(tuple[1]) == 3)
+rdd2 = rdd.map(lambda tuple: (tuple[0], tuple[1], float(tuple[2])))
+from pyspark.sql import Row
+rdd3 = rdd2.map(lambda row: Row(airport=row[0], airport_to=row[1], arr_delay=row[2]))
+df = spark.createDataFrame(rdd3)
+df.write\
+    .format("org.apache.spark.sql.cassandra")\
+    .mode('append')\
+    .options(table="airport_airport_arrival", keyspace="aviation")\
+    .save()
+```
+
+
+Cassandra table definition is the following
+
+```sql
+create table aviation.airport_airport_arrival (
+  airport text,
+  airport_to text,
+  arr_delay decimal,
+  PRIMARY KEY(airport, airport_to)
+);
+```
+
+CQL query example
+
+```sql
+cqlsh> select * from aviation.airport_airport_arrival where airport = 'DFW' and airport_to = 'IAH';
+
+ airport | airport_to | arr_delay
+---------+------------+-----------
+     DFW |        IAH |      7.62
+
+(1 rows)
+```
+
+### References
+[Map-Reduce job](https://github.com/gitaroktato/cloud-capstone/blob/master/src/com/cloudcomputing/OnTimeArrivalByAirports.java)
+
+
+## Question 3.2
+
+_Tom wants to travel from airport X to airport Z. However, Tom also wants to stop at airport Y for some sightseeing on the way._
+
+We use the same approach except, that key-value pairs will be both custom Writable extensions in this case.
+Keys will be constructed from (airport_from, airport_to, flight_date, am_or_pm). Values will be created from (carrier_id, flight_num, departure_time, arrival_delay). Reduce jobs will get all arrival delays from all the keys.
+
+The main goal here is to be able to tell average delay for all the origin-destination pair at a given date. Distinguishing morning and afternoon flights. Because the problem can be split into two independent events (getting from X to Y and from Y to Z), we can answer each questions by two queries.
+
+<..., line> -> **map()** -> <(airport_from, airport_to, flight_date, am_or_pm), (carrier_id, flight_num, departure_time, arrival_delay)> -> **reduce()** -> <(airport_from, airport_to, flight_date, am_or_pm), (carrier_id, flight_num, departure_time, average_arrival_delay)>
+
+Map-Reduce execution is done by the following command.
+
+```bash
+bin/hadoop jar ~/IdeaProjects/cloud-capstone/out/artifacts/cloud_capstone/cloud-capstone.jar com.cloudcomputing.BestFlightOnAGivenDate ontime_perf/*2008*.csv best_flights_2008
+```
+Sample from map-reduce result
+
+```
+ABE ATL 2008-01-01 PM	EV 4833 12:05 12.00
+ABE ATL 2008-01-02 AM	EV 4923 06:00 -19.00
+ABE ATL 2008-01-02 PM	EV 4206 17:17 -35.00
+ABE ATL 2008-01-03 AM	EV 4877 06:40 409.00
+ABE ATL 2008-01-03 PM	EV 4206 17:20 13.00
+...
+```
+
+Searching for a given flight can be done by `PySpark` using two different queries. One from searching at travel date with AM and another one with two days after using PM as parameter.
+
+```
+def get_best_flight(catalog, from_airport, to_airport, date, am_or_pm):
+    line = catalog.filter(lambda line: from_airport in line
+                                       and to_airport in line
+                                       and date in line
+                                       and am_or_pm in line).first()
+    tuple = line.split()
+    return tuple[4:]
+
+
+data_catalog = 'hdfs://localhost:9000/user/sniper/best_flights_2008/part-r-00000'
+catalog = sc.textFile(data_catalog).cache()
+get_best_flight(catalog, 'SLC', 'BFL', '2008-01-04', 'AM')
+get_best_flight(catalog, 'BFL', 'JFK', '2008-01-06', 'PM')
+```
+
+
+PySpark command, that loads results and then moves to Cassandra node.
+
+```
+data_catalog = 'hdfs://localhost:9000/user/sniper/best_flights_2008/part-r-00000'
+catalog = sc.textFile(data_catalog).cache()
+rdd = catalog.map(lambda line: line.split())
+rdd2 = rdd.map(lambda tuple: (tuple[0], tuple[1], tuple[2], tuple[3], tuple[4], tuple[5], tuple[6], float(tuple[7])))
+from pyspark.sql import Row
+rdd3 = rdd2.map(lambda row: Row(airport_from=row[0], airport_to=row[1], given_date=row[2], am_or_pm=row[3], carrier=row[4], flight_num=row[5], departure_time=row[6], arr_delay=row[7])).cache()
+df = spark.createDataFrame(rdd3)
+df.write\
+    .format("org.apache.spark.sql.cassandra")\
+    .mode('append')\
+    .options(table="best_flights_2008", keyspace="aviation")\
+    .save()
+```
+
+Cassandra table definition is the following
+
+```sql
+create table aviation.best_flights_2008 (
+  airport_from text,
+  airport_to text,
+  given_date date,
+  am_or_pm text,
+  carrier text,
+  flight_num text,
+  departure_time text,
+  arr_delay decimal,
+  PRIMARY KEY(airport_from, airport_to, given_date, am_or_pm)
+);
+```
+
+CQL query example
+
+```sql
+cqlsh> select * from aviation.best_flights_2008 where airport_from = 'SLC' and airport_to = 'BFL' and given_date = '2008-01-06' and am_or_pm = 'AM';
+
+ airport_from | airport_to | given_date | am_or_pm | arr_delay | carrier | departure_time | flight_num
+--------------+------------+------------+----------+-----------+---------+----------------+------------
+          SLC |        BFL | 2008-01-06 |       AM |     100.0 |      OO |          11:40 |       3755
+
+(1 rows)
+```
+
+### References
+[Map-Reduce job](https://github.com/gitaroktato/cloud-capstone/blob/master/src/com/cloudcomputing/BestFlightOnAGivenDate.java)
