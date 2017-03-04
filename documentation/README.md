@@ -418,7 +418,7 @@ get_best_flight(catalog, 'BFL', 'JFK', '2008-01-06', 'PM')
 PySpark command, that loads results and then moves to Cassandra node.
 
 ```python
-data_catalog = 'hdfs://localhost:9000/user/sniper/best_flights_2008/part-r-00000'
+data_catalog = 'hdfs://localhost:9000/user/ec2-user/best_flights_2008/part-r-00000'
 catalog = sc.textFile(data_catalog).cache()
 rdd = catalog.map(lambda line: line.split())
 rdd2 = rdd.map(lambda tuple: (tuple[0], tuple[1], tuple[2], tuple[3], tuple[4], tuple[5], tuple[6], float(tuple[7])))
@@ -685,7 +685,25 @@ ATL - PHX
 [[u'ATL', u'PHX', u'9.02']]
 ```
 
+
+
 ## Question 3.1
+
+The CCDF of the popularity for airports looks like the following.
+![Power Law Fit](powerlaw_fit.png)
+
+The CCDF of power-law distributions should be a straight line. Also the lognormal distribution fits
+better to the empirical data. So, the popularity of the airports definitely doesn't follow Zipf distribution.
+
+Loglikelyhood ration tests gives us the following results, when comparing the fitted power-law and lognormal distributions:
+```
+R -3.485522, p 0.000491
+```
+As R is negative, the empirical data is more likely follows a lognormal distribution.
+
+## References
+* [Python code in GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/popularity_check.py)
+* [Python powerlaw package usage explanation](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3906378/)
 
 ## Question 3.2
 CMI → ORD → LAX, 04/03/2008
