@@ -8,6 +8,14 @@ def printResults(rdd):
     for line in rdd.take(10):
         print line
 
+def saveResults(rdd):
+    topten = rdd.take(10)
+    if len(topten) == 0:
+	return
+    file = open(sys.argv[2], 'w')
+    file.writelines(["%s  %s\n" % (item[1], item[0])  for item in topten])
+
+
 sc = SparkContext("local[2]", "TopTenAirports")
 sc.setLogLevel('ERROR')
 
@@ -28,7 +36,9 @@ airportsCounted = airports.map(lambda airport: (airport, 1)).reduceByKey(lambda 
 
 # Filter top ten
 sorted = airportsCounted.map(lambda tuple: (tuple[1], tuple[0])).transform(lambda rdd: rdd.sortByKey(False))
-sorted.foreachRDD(printResults)
+sorted.foreachRDD(lambda rdd: printResults(rdd))
+sorted.foreachRDD(lambda rdd: saveResults(rdd))
 
 ssc.start()             # Start the computation
 ssc.awaitTermination()  # Wait for the computation to terminate
+
