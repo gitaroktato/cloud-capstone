@@ -1,3 +1,5 @@
+# A detailed documentation is available at the `documentation` folder. These are just examples.
+
 # Dataset mount & initialization
 AWS EBS mount details
 ```
