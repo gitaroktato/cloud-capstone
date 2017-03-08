@@ -18,8 +18,23 @@ cd ~/kafka-manager-1.3.3.1/target/universal/kafka-manager-1.3.3.1
 ```
 sudo pip install kafka
 ```
+# Truncate topic in Kakfka
+```
+bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
+```
 
+# Ingest with pyspark
+```
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit  python/ingest_files_to_kafka.py stream localhost:9092
+```
 
+# Top 10 airports
+```
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0  python/streaming_top_airports.py localhost:9092 result.log
+```
 
 # Optimizations
+Calculating top ten on partition and aggregate results on the director (TODO)
+Cutting of unnecessary data in input topic and using it as staging area
+
 

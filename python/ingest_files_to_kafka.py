@@ -16,10 +16,9 @@ def printResults(rdd):
 
 def sendToKafka(messages):
     kafka = KafkaClient('localhost:9092')
-    producer = SimpleProducer(kafka)
+    producer = SimpleProducer(kafka, async=False)
     for message in messages:
         producer.send_messages('input', message.encode())
-	kafka.close()
 
 sc = SparkContext("local[2]", "IngestFilesToKafka")
 sc.setLogLevel('ERROR')
