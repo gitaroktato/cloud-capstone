@@ -11,10 +11,20 @@ def printResults(rdd):
 def saveResults(rdd):
     topten = rdd.take(10)
     if len(topten) == 0:
-	return
+		return
     file = open(sys.argv[2], 'w')
     file.writelines(["%s  %s\n" % (item[1], item[0])  for item in topten])
 
+def cutOffTopTen(iterable):
+	topTen = list()
+	for tuple in iterable:
+		if len(topTen) < 10:
+			topTen.push(tuple)
+			topTen = sorted(topTen, lambda element: element[0])
+		elif topTen[0][0] < tuple[0]:
+			topTen[0] == tuple
+			topTen = sorted(topTen, lambda element: element[0])
+    return iter(topTen)
 
 sc = SparkContext("local[2]", "TopTenAirports")
 sc.setLogLevel('ERROR')
@@ -35,7 +45,10 @@ airports = airports.filter(lambda key: len(key) == 3)
 airportsCounted = airports.map(lambda airport: (airport, 1)).reduceByKey(lambda x, y: x + y)
 
 # Filter top ten
-sorted = airportsCounted.map(lambda tuple: (tuple[1], tuple[0])).transform(lambda rdd: rdd.sortByKey(False))
+# We filter at each worker by partition as well, reducing shuffling time between each workers.
+sorted = airportsCounted.map(lambda tuple: (tuple[1], tuple[0]))
+sorted = sorted.transform(lambda rdd: rdd.mapPartitions(cutOffTopTen))
+sorted = sorted.transform(lambda rdd: rdd.sortByKey(False))
 sorted.foreachRDD(lambda rdd: printResults(rdd))
 sorted.foreachRDD(lambda rdd: saveResults(rdd))
 
