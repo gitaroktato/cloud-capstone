@@ -2,12 +2,14 @@
 from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
+from operator import itemgetter
 import sys
 
 def printResults(rdd):
     print "----------------- TOP 10 ----------------------"
     for line in rdd.take(10):
         print line
+    print "SIZE: %d" % rdd.count()
 
 def saveResults(rdd):
     topten = rdd.take(10)
@@ -16,17 +18,16 @@ def saveResults(rdd):
     file = open(sys.argv[2], 'w')
     file.writelines(["%s  %s\n" % (item[1], item[0])  for item in topten])
 
-# TODO
 def cutOffTopTen(iterable):
-	topTen = list()
-	for tuple in iterable:
+	topTen = []
+	for tupl in iterable:
 		if len(topTen) < 10:
-			topTen.push(tuple)
-			topTen = sorted(topTen, lambda element: element[0])
-		elif topTen[0][0] < tuple[0]:
-			topTen[0] == tuple
-			topTen = sorted(topTen, lambda element: element[0])
-    #return iter(topTen)
+			topTen.append(tupl)
+			topTen.sort()
+		elif topTen[9][0] < tupl[0]:
+			topTen[9] = tupl
+			topTen.sort()
+	return iter(topTen)
 
 def updateFunction(newValues, runningCount):
     if runningCount is None:
@@ -38,7 +39,7 @@ sc = SparkContext("local[2]", "TopTenAirports")
 sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
-ssc = StreamingContext(sc, 10)
+ssc = StreamingContext(sc, 1)
 ssc.checkpoint("checkpoint-top-airports")
 lines = KafkaUtils.createDirectStream(ssc, ['input'], {"metadata.broker.list": sys.argv[1], "auto.offset.reset":"smallest"})
 
@@ -53,9 +54,12 @@ airports = rows.flatMap(lambda row: [row[0], row[1]])
 airportsCounted = airports.map(lambda airport: (airport, 1)).updateStateByKey(updateFunction)
 
 # Filter top ten
-# We filter at each worker by partition as well, reducing shuffling time between each workers
 sorted = airportsCounted.map(lambda tuple: (tuple[1], tuple[0]))
+# We filter at each worker by partition as well, reducing shuffling time between each workers
+# sorted = sorted.transform(lambda rdd: rdd.mapPartitions(cutOffTopTen))
+# Final sorting
 sorted = sorted.transform(lambda rdd: rdd.sortByKey(False))
+# Saving and debugging
 sorted.foreachRDD(lambda rdd: printResults(rdd))
 sorted.foreachRDD(lambda rdd: saveResults(rdd))
 

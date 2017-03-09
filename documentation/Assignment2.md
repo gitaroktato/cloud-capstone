@@ -1,3 +1,7 @@
+# Configuring kafka and ZK
+Change basedir on BOTH from /tmp
+Change retention policy on Kafka
+Add delete.enabled on Kafka
 
 # Starting Spark in distributed mode
 ```
@@ -32,9 +36,13 @@ bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
 ```
 ~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0  python/streaming_top_airports.py localhost:9092 result.log
 ```
+```
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 --conf spark.streaming.kafka.maxRatePerPartition=15000  python/streaming_top_airports.py localhost:9092 result.log
+```
 
 # Optimizations
 Calculating top ten on partition and aggregate results on the director (TODO)
+
 Cutting of unnecessary data in input topic and using it as staging area
 
 
