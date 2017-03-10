@@ -37,7 +37,12 @@ bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
 ~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0  python/streaming_top_airports.py localhost:9092 result.log
 ```
 ```
-~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 --conf spark.streaming.kafka.maxRatePerPartition=15000  python/streaming_top_airports.py localhost:9092 result.log
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 --conf spark.streaming.kafka.maxRatePerPartition=125000  python/streaming_top_airports.py localhost:9092 result.log
+```
+
+# TOP 10 carriers
+```
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 --conf spark.streaming.kafka.maxRatePerPartition=125000  python/streaming_top_carriers.py localhost:9092 topten_carriers.log
 ```
 
 # Optimizations
