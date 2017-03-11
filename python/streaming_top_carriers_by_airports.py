@@ -43,7 +43,7 @@ sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
 ssc = StreamingContext(sc, 1)
-ssc.checkpoint("checkpoint-top-carriers")
+ssc.checkpoint("checkpoint-top-carriers-by-airports")
 lines = KafkaUtils.createDirectStream(ssc, ['input'], {"metadata.broker.list": sys.argv[1], "auto.offset.reset":"smallest"})
 
 # Split each line by separator
@@ -51,21 +51,17 @@ lines = lines.map(lambda tup: tup[1])
 rows = lines.map(lambda line: line.split())
 
 # Get the airports
-rows = rows.filter(lambda row: len(row) > 8)
-carriers = rows.map(lambda row: (row[3], float(row[8])))
+rows = rows.filter(lambda row: len(row) > 7)
+airports_and_carriers = rows.map(lambda row: ((row[0], row[3]), float(row[7])))
 
 # Count averages
-carriers = carriers.updateStateByKey(updateFunction)
+airports_and_carriers = airports_and_carriers.updateStateByKey(updateFunction)
+# Change key to just airports
+airports_and_carriers = airports_and_carriers.map(lambda row: ((row[0][0], row[0][1]), row[1][2]))
+# Cut off top 10 by airports
+airports_and_carriers = airports_and_carriers.filter(lambda x: x[0][0] == 'SRQ' and x[0][1] == 'TZ')
+airports_and_carriers.foreachRDD(printResults)
 
-# Filter top ten
-sorted = carriers.map(lambda tuple: (tuple[1][2], (tuple[0], tuple[1][1])))
-# We filter at each worker by partition as well, reducing shuffling time between each workers
-sorted = sorted.transform(lambda rdd: rdd.mapPartitions(cutOffTopTen))
-# Final sorting
-sorted = sorted.transform(lambda rdd: rdd.sortByKey())
-# Saving and debugging
-sorted.foreachRDD(lambda rdd: printResults(rdd))
-sorted.foreachRDD(lambda rdd: saveResults(rdd))
 
 ssc.start()             # Start the computation
 ssc.awaitTermination()  # Wait for the computation to terminate
