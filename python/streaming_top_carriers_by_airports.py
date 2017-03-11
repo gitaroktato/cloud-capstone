@@ -11,6 +11,7 @@ def printResults(rdd):
         print line
     print "SIZE: %d" % rdd.count()
 
+# TODO
 def saveResults(rdd):
     topten = rdd.take(10)
     if len(topten) == 0:
@@ -45,7 +46,7 @@ def append(aggr, newCarrierAvg):
 	"""
 	aggr.append(newCarrierAvg)
 	aggr.sort(key=lambda element: element[1])
-	return aggr[0:9]
+	return aggr[0:10]
 
 def combine(left, right):
 	"""
