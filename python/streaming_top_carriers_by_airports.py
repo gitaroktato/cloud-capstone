@@ -38,6 +38,25 @@ def updateFunction(newValues, runningAvg):
     avg = prod / float(count)
     return (prod, count, avg)
 
+def append(aggr, newCarrierAvg):
+	"""
+	Add new element to aggregate. Aggregate contains top ten carriers and departure delays.
+	Sample: [('TZ',-0.0001), ('AQ',0.025), ('MS',0.3)]
+	"""
+	aggr.append(newCarrierAvg)
+	aggr.sort(key=lambda element: element[1])
+	return aggr[0:9]
+
+def combine(left, right):
+	"""
+	Combine two aggregates. Aggregate contains top ten carriers and departure delays.
+	Sample: [('TZ',-0.0001), ('AQ',0.025), ('MS',0.3)]
+	"""
+	for newElement in right:
+		left.append(newElement)
+	left.sort(key=lambda element: element[1])
+	return left[0:10]
+
 sc = SparkContext("local[2]", "TopTenCarriers")
 sc.setLogLevel('ERROR')
 
@@ -57,10 +76,12 @@ airports_and_carriers = rows.map(lambda row: ((row[0], row[3]), float(row[7])))
 # Count averages
 airports_and_carriers = airports_and_carriers.updateStateByKey(updateFunction)
 # Change key to just airports
-airports_and_carriers = airports_and_carriers.map(lambda row: ((row[0][0], row[0][1]), row[1][2]))
-# Cut off top 10 by airports
-airports_and_carriers = airports_and_carriers.filter(lambda x: x[0][0] == 'SRQ' and x[0][1] == 'TZ')
-airports_and_carriers.foreachRDD(printResults)
+airports = airports_and_carriers.map(lambda row: (row[0][0], (row[0][1], row[1][2])))
+# Aggregate to just top 10 carriers
+airports = airports.transform(lambda rdd: rdd.aggregateByKey([],append,combine))
+#Filter and print
+airports = airports.filter(lambda x: x[0] in ['SRQ', 'CMH', 'JFK', 'SEA', 'BOS'])
+airports.foreachRDD(printResults)
 
 
 ssc.start()             # Start the computation
