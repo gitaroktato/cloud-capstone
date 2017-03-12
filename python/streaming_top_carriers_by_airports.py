@@ -2,7 +2,7 @@
 from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
-from operator import itemgetter
+from kafka import SimpleProducer, KafkaClient
 import sys
 
 def printResults(rdd):
@@ -62,6 +62,22 @@ def combine(left, right):
 	left.sort(key=lambda element: element[1])
 	return left[0:10]
 
+
+def sendToKafka(records):
+	"""
+	Send records to Kafka. The format is the following
+	JFK AQ -3.013333
+	JFK AA 0.01113
+	"""
+	kafka = KafkaClient('localhost:9092')
+	producer = SimpleProducer(kafka, async=False)
+	for record in records:
+		for item in record[1]:
+			message = "%s %s %s" % (record[0], item[0], item[1])
+			producer.send_messages('top_carriers_by_airports', message.encode())
+
+# MAIN
+
 sc = SparkContext("local[2]", "TopTenCarriers")
 sc.setLogLevel('ERROR')
 
@@ -89,6 +105,8 @@ airports = airports.filter(lambda x: x[0] in ['SRQ', 'CMH', 'JFK', 'SEA', 'BOS']
 airports.foreachRDD(printResults)
 airports.foreachRDD(saveResults)
 
+# Kafka sink
+airports.foreachRDD(lambda rdd: rdd.foreachPartition(sendToKafka))
 
 ssc.start()             # Start the computation
 ssc.awaitTermination()  # Wait for the computation to terminate
