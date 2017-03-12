@@ -6,18 +6,22 @@ from operator import itemgetter
 import sys
 
 def printResults(rdd):
-    print "----------------- TOP 10 ----------------------"
-    for line in rdd.take(10):
+    """
+    Print partial results to screen.
+    """
+    print "----------------- SNAPSHOT ----------------------"
+    for line in rdd.collect():
         print line
     print "SIZE: %d" % rdd.count()
 
-# TODO
 def saveResults(rdd):
-    topten = rdd.take(10)
-    if len(topten) == 0:
-		return
-    file = open(sys.argv[2], 'w')
-    file.writelines(["%s  %s\n" % (item[1], item[0])  for item in topten])
+	"""
+	Save results as a report.
+	"""
+	file = open(sys.argv[2], 'w')
+	for item in rdd.collect():
+		file.write("\n--- %s ---\n\n" % item[0])
+		file.writelines(["(%s: %s)\n" % (record[0], record[1]) for record in item[1]])
 
 def cutOffTopTen(iterable):
 	topTen = []
@@ -83,6 +87,7 @@ airports = airports.transform(lambda rdd: rdd.aggregateByKey([],append,combine))
 #Filter and print
 airports = airports.filter(lambda x: x[0] in ['SRQ', 'CMH', 'JFK', 'SEA', 'BOS'])
 airports.foreachRDD(printResults)
+airports.foreachRDD(saveResults)
 
 
 ssc.start()             # Start the computation
