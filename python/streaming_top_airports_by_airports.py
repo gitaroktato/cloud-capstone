@@ -46,19 +46,19 @@ def updateFunction(newValues, runningAvg):
     avg = prod / float(count)
     return (prod, count, avg)
 
-def append(aggr, newCarrierAvg):
+def append(aggr, newAirportAvg):
 	"""
-	Add new element to aggregate. Aggregate contains top ten carriers and departure delays.
-	Sample: [('TZ',-0.0001), ('AQ',0.025), ('MS',0.3)]
+	Add new element to aggregate. Aggregate contains top ten airports and departure delays.
+	Sample: [('JFK',-0.0001), ('SFO',0.025), ('LAX',0.3)]
 	"""
-	aggr.append(newCarrierAvg)
+	aggr.append(newAirportAvg)
 	aggr.sort(key=lambda element: element[1])
 	return aggr[0:10]
 
 def combine(left, right):
 	"""
-	Combine two aggregates. Aggregate contains top ten carriers and departure delays.
-	Sample: [('TZ',-0.0001), ('AQ',0.025), ('MS',0.3)]
+	Combine two aggregates. Aggregate contains top ten airports and departure delays.
+	Sample: [('JFK',-0.0001), ('SFO',0.025), ('LAX',0.3)]
 	"""
 	for newElement in right:
 		left.append(newElement)
@@ -69,24 +69,24 @@ def combine(left, right):
 def sendToKafka(records):
 	"""
 	Send records to Kafka. The format is the following
-	JFK AQ -3.013333
-	JFK AA 0.01113
+	JFK LAX -3.013333
+	JFK ORD 0.01113
 	"""
 	kafka = KafkaClient('localhost:9092')
-	producer = SimpleProducer(kafka, async=False)
+	producer = SimpleProducer(kafka)
 	for record in records:
 		for item in record[1]:
 			message = "%s %s %s" % (record[0], item[0], item[1])
-			producer.send_messages('top_carriers_by_airports', message.encode())
+			producer.send_messages('top_airports_by_airports', message.encode())
 
 # MAIN
 
-sc = SparkContext("local[2]", "TopTenCarriers")
+sc = SparkContext("local[2]", "TopTenAirportsByAirports")
 sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
 ssc = StreamingContext(sc, 1)
-ssc.checkpoint("checkpoint-top-carriers-by-airports")
+ssc.checkpoint("checkpoint-top-airports-by-airports")
 lines = KafkaUtils.createDirectStream(ssc, ['input'], {"metadata.broker.list": sys.argv[1], "auto.offset.reset":"smallest"})
 
 # Split each line by separator
@@ -95,7 +95,7 @@ rows = lines.map(lambda line: line.split())
 
 # Get the airports
 rows = rows.filter(lambda row: len(row) > 7)
-airports_and_carriers = rows.map(lambda row: ((row[0], row[3]), float(row[7])))
+airports_and_carriers = rows.map(lambda row: ((row[0], row[1]), float(row[7])))
 
 # Count averages
 airports_and_carriers = airports_and_carriers.updateStateByKey(updateFunction)
