@@ -3,7 +3,7 @@ from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
 from pyspark.sql import Row
-from pyspark import spark
+from pyspark.sql import SQLContext, SparkSession
 import sys
 
 def printResults(rdd):
@@ -12,18 +12,34 @@ def printResults(rdd):
         print line
     print "SIZE: %d" % rdd.count()
 
-def saveToCassandra(iterable):
-	for record in iterable:
-		df = spark.createDataFrame(record)
-		df.write\
-			.format("org.apache.spark.sql.cassandra")\
-			.mode('append')\
-			.options(table="airport_carrier_departure", keyspace="aviation")\
-			.save()
+# Lazily instantiated global instance of SparkSession
+def getSparkSessionInstance(sparkConf):
+    if ("sparkSessionSingletonInstance" not in globals()):
+        globals()["sparkSessionSingletonInstance"] = SparkSession \
+            .builder \
+            .config(conf=sparkConf) \
+            .getOrCreate()
+    return globals()["sparkSessionSingletonInstance"]
+
+
+def saveToCassandra(rdd):
+	if rdd.count() == 0:
+		return
+	# Get the singleton instance of SparkSession
+	spark = getSparkSessionInstance(rdd.context.getConf())
+	
+	rowRdd = rdd.map(lambda row: Row(airport=row[0], carrier=row[1], dep_delay=row[2]))
+	df = spark.createDataFrame(rowRdd)
+	df.write\
+		.format("org.apache.spark.sql.cassandra")\
+		.mode('overwrite')\
+		.options(table="airport_carrier_departure", keyspace="aviation")\
+		.save()
 
 # MAIN
 
 sc = SparkContext("local[2]", "TopCarriersByAirportsToCassandra")
+sqlContext = SQLContext(sc)
 sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
@@ -34,11 +50,9 @@ lines = KafkaUtils.createDirectStream(ssc, ['top_carriers_by_airports'], {"metad
 lines = lines.map(lambda message: message[1])
 lines = lines.map(lambda line: line.split())
 lines = lines.map(lambda tuple: (tuple[0], tuple[1], float(tuple[2])))
-lines = lines.map(lambda row: Row(airport=row[0], carrier=row[1], dep_delay=row[2]))
-
 # Save to Cassandra
 lines.foreachRDD(printResults)
-lines.foreachRDD(lambda rdd: rdd.foreachPartition(saveToCassandra))
+lines.foreachRDD(saveToCassandra)
 
 ssc.start()             # Start the computation
 ssc.awaitTermination()  # Wait for the computation to terminate
