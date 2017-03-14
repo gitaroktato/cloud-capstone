@@ -39,7 +39,7 @@ bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
 
 # Top 10 airports
 ```
-~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master spark://ip-172-31-49-121.ec2.internal:7077 --conf spark.streaming.kafka.maxRatePerPartition=125000 --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0  ./streaming_top_airports.py 172.31.62.92:9092,172.31.55.234:9092 topten_airports.log
+ ~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master spark://ip-172-31-49-121.ec2.internal:7077 --conf spark.streaming.kafka.maxRatePerPartition=125000 --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0,org.apache.hadoop:hadoop-aws:2.7.3  ./streaming_top_airports.py 172.31.62.92:9092,172.31.55.234:9092 topten_airports.log
 ```
 
 # TOP 10 carriers
