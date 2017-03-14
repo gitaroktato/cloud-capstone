@@ -35,7 +35,7 @@ def updateFunction(newValues, runningCount):
     # add the new values with the previous running count to get the new count
     return sum(newValues, runningCount)
 
-sc = SparkContext("local[2]", "TopTenAirports")
+sc = SparkContext(appName="TopTenAirports")
 sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
