@@ -9,7 +9,7 @@ create table aviation.airport_airport_departure (
   airport text,
   airport_to text,
   dep_delay decimal,
-  PRIMARY KEY(airport, dep_delay, airport_to)
+  PRIMARY KEY(airport, airport_to)
 );
 create table aviation.airport_airport_arrival (
   airport text,
