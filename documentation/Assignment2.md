@@ -65,6 +65,11 @@ bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
 ~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 --conf spark.streaming.kafka.maxRatePerPartition=250000  python/streaming_top_airports_by_airports.py localhost:9092
 ```
 
+# Question 2.2 to Cassandra
+```
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0,datastax:spark-cassandra-connector:2.0.0-RC1-s_2.11 --conf spark.streaming.kafka.maxRatePerPartition=2500 --conf spark.cassandra.connection.host=localhost python/streaming_top_airports_by_airports_to_cassandra.py localhost:9092
+```
+
 # Optimizations
 Calculating top ten on partition and aggregate results on the director
 
