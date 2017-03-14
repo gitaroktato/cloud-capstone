@@ -81,7 +81,7 @@ def sendToKafka(records):
 
 # MAIN
 
-sc = SparkContext("local[2]", "TopTenAirportsByAirports")
+sc = SparkContext(appName="TopTenAirportsByAirports")
 sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext

@@ -34,7 +34,7 @@ bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
 
 # Ingest with pyspark
 ```
-~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit  python/ingest_files_to_kafka.py stream localhost:9092
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master local[4] ./ingest_files_to_kafka.py input
 ```
 
 # Top 10 airports

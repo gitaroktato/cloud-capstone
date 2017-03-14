@@ -15,12 +15,12 @@ def printResults(rdd):
         print line
 
 def sendToKafka(messages):
-    kafka = KafkaClient('localhost:9092')
+    kafka = KafkaClient('172.31.62.92:9092,172.31.55.234:9092')
     producer = SimpleProducer(kafka, async=False)
     for message in messages:
         producer.send_messages('input', message.encode())
 
-sc = SparkContext("local[2]", "IngestFilesToKafka")
+sc = SparkContext(appName="IngestFilesToKafka")
 sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
