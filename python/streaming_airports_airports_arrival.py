@@ -44,16 +44,16 @@ def sendToKafka(records):
 	producer = SimpleProducer(kafka)
 	for record in records:
 		message = "%s %s %s" % (record[0][0], record[0][1], record[1])
-		producer.send_messages('airports_airports_departure', message.encode())
+		producer.send_messages('airports_airports_arrival', message.encode())
 
 # MAIN
 
-sc = SparkContext(appName="AirportAirportDeparture")
+sc = SparkContext(appName="AirportAirportArrival")
 sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
 ssc = StreamingContext(sc, 1)
-ssc.checkpoint("checkpoint-airport-airport-departures")
+ssc.checkpoint("checkpoint-airport-airport-arrival")
 lines = KafkaUtils.createDirectStream(ssc, ['input'], {"metadata.broker.list": sys.argv[1], "auto.offset.reset":"smallest"})
 
 # Split each line by separator
