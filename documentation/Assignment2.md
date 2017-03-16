@@ -44,7 +44,7 @@ bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
 
 # TOP 10 carriers
 ```
-~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 --conf spark.streaming.kafka.maxRatePerPartition=125000  python/streaming_top_carriers.py localhost:9092 topten_carriers.log
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master spark://ip-172-31-49-121.ec2.internal:7077 --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0,org.apache.hadoop:hadoop-aws:2.7.3 --conf spark.streaming.kafka.maxRatePerPartition=125000  ./streaming_top_carriers.py 172.31.62.92:9092,172.31.55.234:9092 topten_carriers.log
 ```
 
 # Question 2.1
@@ -83,5 +83,3 @@ Calculating top ten on partition and aggregate results on the director
 Cutting of unnecessary data in input topic and using it as staging area
 
 Aggregating top ten carriers for each airport to reduce data transfer and cassandra save time (not all airport-carrier pairs will be stored in DB)
-
-
