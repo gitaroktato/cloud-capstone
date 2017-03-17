@@ -59,7 +59,7 @@ bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
 
 # Question 2.2
 ```
-~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master spark://ip-172-31-49-121.ec2.internal:7077 --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0,org.apache.hadoop:hadoop-aws:2.7.3 --conf spark.streaming.kafka.maxRatePerPartition=250000  ./streaming_top_airports_by_airports.py localhost:9092 172.31.62.92:9092,172.31.55.234:9092 top_airports_by_airports.log
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master spark://ip-172-31-49-121.ec2.internal:7077 --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0,org.apache.hadoop:hadoop-aws:2.7.3 --conf spark.streaming.kafka.maxRatePerPartition=250000  ./streaming_top_airports_by_airports.py 172.31.62.92:9092,172.31.55.234:9092 top_airports_by_airports.log
 ```
 
 # Question 2.2 to Cassandra
