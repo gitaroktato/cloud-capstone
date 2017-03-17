@@ -38,12 +38,12 @@ def updateFunction(newValues, runningAvg):
     avg = prod / float(count)
     return (prod, count, avg)
 
-sc = SparkContext("local[2]", "TopTenCarriers")
+sc = SparkContext(appName="TopTenCarriers")
 sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
 ssc = StreamingContext(sc, 1)
-ssc.checkpoint("checkpoint-top-carriers")
+ssc.checkpoint("s3a://cloudcapstone-checkpoints/checkpoints/checkpoint-top-carriers")
 lines = KafkaUtils.createDirectStream(ssc, ['input'], {"metadata.broker.list": sys.argv[1], "auto.offset.reset":"smallest"})
 
 # Split each line by separator
@@ -69,4 +69,3 @@ sorted.foreachRDD(lambda rdd: saveResults(rdd))
 
 ssc.start()             # Start the computation
 ssc.awaitTermination()  # Wait for the computation to terminate
-
