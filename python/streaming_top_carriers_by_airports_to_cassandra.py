@@ -27,7 +27,7 @@ def saveToCassandra(rdd):
 		return
 	# Get the singleton instance of SparkSession
 	spark = getSparkSessionInstance(rdd.context.getConf())
-	
+
 	rowRdd = rdd.map(lambda row: Row(airport=row[0], carrier=row[1], dep_delay=row[2]))
 	df = spark.createDataFrame(rowRdd)
 	df.write\
@@ -38,8 +38,7 @@ def saveToCassandra(rdd):
 
 # MAIN
 
-sc = SparkContext("local[2]", "TopCarriersByAirportsToCassandra")
-sqlContext = SQLContext(sc)
+sc = SparkContext(appName="TopCarriersByAirportsToCassandra")
 sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
@@ -56,4 +55,3 @@ lines.foreachRDD(saveToCassandra)
 
 ssc.start()             # Start the computation
 ssc.awaitTermination()  # Wait for the computation to terminate
-

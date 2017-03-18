@@ -54,12 +54,12 @@ bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
 
 # Question 2.1 to Cassandra
 ```
-~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0,datastax:spark-cassandra-connector:2.0.0-RC1-s_2.11 --conf spark.streaming.kafka.maxRatePerPartition=250 --conf spark.cassandra.connection.host=localhost python/streaming_top_carriers_by_airports_to_cassandra.py localhost:9092
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master spark://ip-172-31-49-121.ec2.internal:7077 --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0,datastax:spark-cassandra-connector:2.0.0-RC1-s_2.11,org.apache.hadoop:hadoop-aws:2.7.3 --conf spark.streaming.kafka.maxRatePerPartition=250 --conf spark.cassandra.connection.host=172.31.51.216 ./streaming_top_carriers_by_airports_to_cassandra.py 172.31.62.92:9092,172.31.55.234:9092
 ```
 
 # Question 2.2
 ```
-~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 --conf spark.streaming.kafka.maxRatePerPartition=250000  python/streaming_top_airports_by_airports.py localhost:9092
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master spark://ip-172-31-49-121.ec2.internal:7077 --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0,org.apache.hadoop:hadoop-aws:2.7.3 --conf spark.streaming.kafka.maxRatePerPartition=250000  ./streaming_top_airports_by_airports.py 172.31.62.92:9092,172.31.55.234:9092 top_airports_by_airports.log
 ```
 
 # Question 2.2 to Cassandra

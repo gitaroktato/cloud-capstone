@@ -72,7 +72,7 @@ def sendToKafka(records):
 	JFK LAX -3.013333
 	JFK ORD 0.01113
 	"""
-	kafka = KafkaClient('localhost:9092')
+	kafka = KafkaClient('172.31.62.92:9092,172.31.55.234:9092')
 	producer = SimpleProducer(kafka)
 	for record in records:
 		for item in record[1]:
@@ -86,7 +86,7 @@ sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
 ssc = StreamingContext(sc, 1)
-ssc.checkpoint("checkpoint-top-airports-by-airports")
+ssc.checkpoint("s3a://cloudcapstone-checkpoints/checkpoints/checkpoint-top-airports-by-airports")
 lines = KafkaUtils.createDirectStream(ssc, ['input'], {"metadata.broker.list": sys.argv[1], "auto.offset.reset":"smallest"})
 
 # Split each line by separator
@@ -114,4 +114,3 @@ airports.foreachRDD(lambda rdd: rdd.foreachPartition(sendToKafka))
 
 ssc.start()             # Start the computation
 ssc.awaitTermination()  # Wait for the computation to terminate
-
