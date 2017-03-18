@@ -13,7 +13,7 @@ def printResults(rdd):
 
 # MAIN
 
-sc = SparkContext("local[2]", "Peek")
+sc = SparkContext(appName="Peek")
 sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
