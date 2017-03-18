@@ -80,7 +80,7 @@ bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
 # Question 3.2
 Filter for 2008
 ```
-~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master local[2] --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 --conf spark.streaming.kafka.maxRatePerPartition=250000  python/streaming_filter_2008.py localhost:9092
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master local[2] --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 --conf spark.streaming.kafka.maxRatePerPartition=250  python/streaming_best_flights.py localhost:9092
 ```
 
 # Optimizations
