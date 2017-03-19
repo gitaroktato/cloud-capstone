@@ -49,7 +49,19 @@ def getMinimum(newValues, currentMin):
 	newMin = min(newValues, key=lambda item: item[3])
 	return newMin
 
-# TODO 2 Kafka
+def sendToKafka(records):
+	"""
+	Send records to Kafka. The format is the following
+	BOS ATL 2008-04-03 AM FL 270 06:00 7.0
+	ATL LAX 2008-04-05 PM DL 1423 21:45 -2.4
+	"""
+	kafka = KafkaClient('localhost:9092')
+	producer = SimpleProducer(kafka)
+	for record in records:
+		message = "%s %s %s %s %s %s %s %s" % \
+			(record[0][0], record[0][1], record[0][2], record[0][3], record[1][0], record[1][1], record[1][2], record[1][3])
+		producer.send_messages('best_flights_2008', message.encode())
+
 
 # MAIN
 
@@ -77,7 +89,7 @@ airports_fromto = rows.map(lambda row: ( \
 )
 # Filtering just necessary flights
 airports_fromto = airports_fromto.filter(lambda row: row[0] == ('BOS', 'ATL', '2008-04-03', 'AM')) \
-		.union(airports_fromto.filter(lambda row: row[0] == ('ATL', 'LAX', '2008-04-06', 'PM'))) \
+		.union(airports_fromto.filter(lambda row: row[0] == ('ATL', 'LAX', '2008-04-05', 'PM'))) \
 		.union(airports_fromto.filter(lambda row: row[0] == ('PHX', 'JFK', '2008-09-07', 'AM'))) \
 		.union(airports_fromto.filter(lambda row: row[0] == ('JFK', 'MSP', '2008-09-09', 'PM'))) \
 		.union(airports_fromto.filter(lambda row: row[0] == ('DFW', 'STL', '2008-01-24', 'AM'))) \
@@ -91,6 +103,9 @@ airports_fromto = airports_fromto.updateStateByKey(getMinimum)
 # Print and save
 airports_fromto.foreachRDD(printResults)
 airports_fromto.foreachRDD(saveResults)
+
+# Kafka Sink
+airports_fromto.foreachRDD(lambda rdd: rdd.foreachPartition(sendToKafka))
 
 ssc.start()             # Start the computation
 ssc.awaitTermination()  # Wait for the computation to terminate
