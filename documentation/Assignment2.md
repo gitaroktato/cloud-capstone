@@ -78,9 +78,14 @@ bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
 ```
 
 # Question 3.2
-Filter for 2008
+
 ```
-~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master local[2] --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 --conf spark.streaming.kafka.maxRatePerPartition=250  python/streaming_best_flights.py localhost:9092
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master local[2] --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0 --conf spark.streaming.kafka.maxRatePerPartition=125000  python/streaming_best_flights.py localhost:9092 best_flights_2008.log
+```
+
+# Question 3.2 to Cassandra
+```
+~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master local[2] --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0,datastax:spark-cassandra-connector:2.0.0-RC1-s_2.11 --conf spark.streaming.kafka.maxRatePerPartition=250 --conf spark.cassandra.connection.host=localhost  python/streaming_best_flights_to_cassandra.py localhost:9092
 ```
 
 # Optimizations
