@@ -28,11 +28,11 @@ def saveToCassandra(rdd):
 	# Get the singleton instance of SparkSession
 	spark = getSparkSessionInstance(rdd.context.getConf())
 
-	rowRdd = rdd.map(lambda row: Row(airport=row[0][0], airport_to=row[0][1], arr_delay=row[1]))
+	rowRdd = rdd.map(lambda row: Row(airport=row[0], airport_to=row[1], arr_delay=row[2]))
 	df = spark.createDataFrame(rowRdd)
 	df.write\
 		.format("org.apache.spark.sql.cassandra")\
-		.mode('overwrite')\
+		.mode('append')\
 		.options(table="airport_airport_arrival", keyspace="aviation")\
 		.save()
 
@@ -48,7 +48,7 @@ lines = KafkaUtils.createDirectStream(ssc, ['airports_airports_arrival'], {"meta
 # Transform
 lines = lines.map(lambda message: message[1])
 lines = lines.map(lambda line: line.split())
-lines = lines.map(lambda tuple: ((tuple[0], tuple[1]), float(tuple[2])))
+lines = lines.map(lambda tuple: (tuple[0], tuple[1], float(tuple[2])))
 # Save to Cassandra
 lines.foreachRDD(printResults)
 lines.foreachRDD(saveToCassandra)
