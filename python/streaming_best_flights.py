@@ -55,7 +55,7 @@ def sendToKafka(records):
 	BOS ATL 2008-04-03 AM FL 270 06:00 7.0
 	ATL LAX 2008-04-05 PM DL 1423 21:45 -2.4
 	"""
-	kafka = KafkaClient('localhost:9092')
+	kafka = KafkaClient('172.31.62.92:9092,172.31.55.234:9092')
 	producer = SimpleProducer(kafka)
 	for record in records:
 		message = "%s %s %s %s %s %s %s %s" % \
@@ -70,7 +70,7 @@ sc.setLogLevel('ERROR')
 
 # Create a local StreamingContext
 ssc = StreamingContext(sc, 1)
-ssc.checkpoint("checkpoint-best-flights")
+ssc.checkpoint("s3a://cloudcapstone-checkpoints/checkpoints/checkpoint-best-flights")
 lines = KafkaUtils.createDirectStream(ssc, ['input_2008'], \
 	{"metadata.broker.list": sys.argv[1], "auto.offset.reset":"smallest"})
 
@@ -109,4 +109,3 @@ airports_fromto.foreachRDD(lambda rdd: rdd.foreachPartition(sendToKafka))
 
 ssc.start()             # Start the computation
 ssc.awaitTermination()  # Wait for the computation to terminate
-
