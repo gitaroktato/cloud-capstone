@@ -28,7 +28,7 @@ def saveToCassandra(rdd):
 	# Get the singleton instance of SparkSession
 	spark = getSparkSessionInstance(rdd.context.getConf())
 
-	rowRdd = rdd.map(lambda row: Row(airport=row[0][0], airport_to=row[0][1], arr_delay=row[2]))
+	rowRdd = rdd.map(lambda row: Row(airport=row[0][0], airport_to=row[0][1], arr_delay=row[1]))
 	df = spark.createDataFrame(rowRdd)
 	df.write\
 		.format("org.apache.spark.sql.cassandra")\

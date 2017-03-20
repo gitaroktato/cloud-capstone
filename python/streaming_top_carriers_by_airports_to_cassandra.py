@@ -32,7 +32,7 @@ def saveToCassandra(rdd):
 	df = spark.createDataFrame(rowRdd)
 	df.write\
 		.format("org.apache.spark.sql.cassandra")\
-		.mode('overwrite')\
+		.mode('append')\
 		.options(table="airport_carrier_departure", keyspace="aviation")\
 		.save()
 

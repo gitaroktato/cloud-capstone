@@ -27,12 +27,12 @@ def saveToCassandra(rdd):
 		return
 	# Get the singleton instance of SparkSession
 	spark = getSparkSessionInstance(rdd.context.getConf())
-	
+
 	rowRdd = rdd.map(lambda row: Row(airport=row[0], airport_to=row[1], dep_delay=row[2]))
 	df = spark.createDataFrame(rowRdd)
 	df.write\
 		.format("org.apache.spark.sql.cassandra")\
-		.mode('overwrite')\
+		.mode('append')\
 		.options(table="airport_airport_departure", keyspace="aviation")\
 		.save()
 
@@ -56,4 +56,3 @@ lines.foreachRDD(saveToCassandra)
 
 ssc.start()             # Start the computation
 ssc.awaitTermination()  # Wait for the computation to terminate
-
