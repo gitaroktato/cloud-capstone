@@ -155,7 +155,7 @@ When this is done, all continuously refined top ten performing carriers are deli
 * [Cassandra migration job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_top_carriers_by_airports_to_cassandra.py)
 * [Cassandra table definitions](https://github.com/gitaroktato/cloud-capstone/blob/master/cassandra/streaming_ddl.cql)
 
-# Question 2.2
+## Question 2.2
 This is analogue to Question 2.1
 
 ### References
@@ -163,7 +163,7 @@ This is analogue to Question 2.1
 * [Cassandra migration job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_top_airports_by_airports_to_cassandra.py)
 * [Cassandra table definitions](https://github.com/gitaroktato/cloud-capstone/blob/master/cassandra/streaming_ddl.cql)
 
-# Question 2.4
+## Question 2.4
 ![Question 2.4](question_2.4.PNG)
 
 We calculate the mean arrival delay for all the airport from-to pairs. The average calculation method is the same as in Question 2.1.
@@ -180,7 +180,17 @@ Another Spark Streaming job deals with updating results in Cassandra from this t
 * [Cassandra migration job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_airports_airports_arrival_to_cassandra.py)
 * [Cassandra table definitions](https://github.com/gitaroktato/cloud-capstone/blob/master/cassandra/streaming_ddl.cql)
 
-# Question 3.1
+## Question 3.1
 Question 3.1 is not needed by description of ![Task 2 Overview](https://www.coursera.org/learn/cloud-computing-project/supplement/7Ziaf/task-2-overview). But if you're interested, check out solution in documentation of Task 1.
 ### References
 * [Documentation of Task 1 in GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/documentation/README.md)
+
+## Question 3.2
+
+# Results
+
+
+
+# Optimizations
+
+# Streaming and Batch Comparison
