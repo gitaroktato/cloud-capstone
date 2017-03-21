@@ -62,6 +62,8 @@ MCI LAX 2008-04-03 WN 450 1135 1226 51.00 41.00
 * [Spark Streaming job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/ingest_files_to_kafka.py)
 
 ## Question 1.1
+![Question 1.1](question_1.1.PNG)
+
 Airport from-to information is collected by using flatMap from input stream
 ```python
 rows.flatMap(lambda row: [row[0], row[1]])
@@ -74,15 +76,106 @@ To reduce the traffic, we cut off the amount of records to just the top 10 most 
 ```python
 sorted.transform(lambda rdd: rdd.mapPartitions(cutOffTopTen))
 ```
+```python
+def cutOffTopTen(iterable):
+	topTen = []
+	for tupl in iterable:
+		if len(topTen) < 10:
+			topTen.append(tupl)
+			topTen.sort(reverse=True)
+		elif topTen[9][0] < tupl[0]:
+			topTen[9] = tupl
+			topTen.sort(reverse=True)
+	return iter(topTen)
+```
 Then we sort RDDs by popularity.
-
-![Question 1.1](question_1.1.PNG)
+```python
+sorted = sorted.transform(lambda rdd: rdd.sortByKey(False))
+```
 
 ### References
-* [Spark Streaming job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_top_airport.py)
+* [Spark Streaming job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_top_airports.py)
 
 ## Question 1.2
-This is very similar to  Question 1.1
+This is analogue to Question 1.1
 
 ### References
 * [Spark Streaming job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_top_carriers.py)
+
+## Question 2.1
+![Question 2.1](question_2.1.PNG)
+
+First we use the `updateStateByKey` function with Spark checkpoints to count average departure delays for all airport-carrier pairs. The `updateFunction` calculates three values for each: sum, count and sum/count.
+```python
+airports_and_carriers.updateStateByKey(updateFunction)
+```
+```python
+def updateFunction(newValues, runningAvg):
+    if runningAvg is None:
+        runningAvg = (0.0, 0, 0.0)
+    # calculate sum, count and average.
+    prod = sum(newValues, runningAvg[0])
+    count = runningAvg[1] + len(newValues)
+    avg = prod / float(count)
+    return (prod, count, avg)
+```
+
+Then we use the `aggregateByKey` to have an ordered list of top ten performing carrier for each airport. This is tricky at first, but keeps calculations and data traffic at minimum. Aggregate contains top ten carriers and departure delays. Sample aggregated value for an airport: `[('TZ',-0.0001), ('AQ',0.025), ('MS',0.3)]`
+
+```python
+airports = airports.transform(lambda rdd: rdd.aggregateByKey([],append,combine))
+```
+```python
+def append(aggr, newCarrierAvg):
+	"""
+	Add new element to aggregate. Aggregate contains top ten carriers and departure delays.
+	Sample: [('TZ',-0.0001), ('AQ',0.025), ('MS',0.3)]
+	"""
+	aggr.append(newCarrierAvg)
+	aggr.sort(key=lambda element: element[1])
+	return aggr[0:10]
+```
+```python
+def combine(left, right):
+	"""
+	Combine two aggregates. Aggregate contains top ten carriers and departure delays.
+	Sample: [('TZ',-0.0001), ('AQ',0.025), ('MS',0.3)]
+	"""
+	for newElement in right:
+		left.append(newElement)
+	left.sort(key=lambda element: element[1])
+	return left[0:10]
+```
+
+When this is done, all continuously refined top ten performing carriers are delivered to a separate topic called `top_carriers_by_airports` This topic is then consumed by another Spark Streaming job, which saves and updates values to Cassandra.
+
+
+### References
+* [Spark Streaming job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_top_carriers_by_airports.py)
+* [Cassandra migration job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_top_carriers_by_airports_to_cassandra.py)
+* [Cassandra table definitions](https://github.com/gitaroktato/cloud-capstone/blob/master/cassandra/streaming_ddl.cql)
+
+# Question 2.2
+This is analogue to Question 2.1
+
+### References
+* [Spark Streaming job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_top_airports_by_airports.py)
+* [Cassandra migration job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_top_airports_by_airports_to_cassandra.py)
+* [Cassandra table definitions](https://github.com/gitaroktato/cloud-capstone/blob/master/cassandra/streaming_ddl.cql)
+
+# Question 2.4
+![Question 2.4](question_2.4.PNG)
+
+We calculate the mean arrival delay for all the airport from-to pairs. The average calculation method is the same as in Question 2.1.
+
+```python
+airports_fromto = airports_fromto.updateStateByKey(updateFunction)
+```
+
+Then we just filter out for all relevant from-to pairs and save it to `airports_airports_arrival` topic in Kafka.
+Another Spark Streaming job deals with updating results in Cassandra from this topic.
+
+### References
+* [Spark Streaming job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_airports_airports_arrival.py)
+* [Cassandra migration job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_airports_airports_arrival_to_cassandra.py)
+* [Cassandra table definitions](https://github.com/gitaroktato/cloud-capstone/blob/master/cassandra/streaming_ddl.cql)
