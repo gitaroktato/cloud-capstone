@@ -179,3 +179,8 @@ Another Spark Streaming job deals with updating results in Cassandra from this t
 * [Spark Streaming job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_airports_airports_arrival.py)
 * [Cassandra migration job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_airports_airports_arrival_to_cassandra.py)
 * [Cassandra table definitions](https://github.com/gitaroktato/cloud-capstone/blob/master/cassandra/streaming_ddl.cql)
+
+# Question 3.1
+Question 3.1 is not needed by description of ![Task 2 Overview](https://www.coursera.org/learn/cloud-computing-project/supplement/7Ziaf/task-2-overview). But if you're interested, check out solution in documentation of Task 1.
+### References
+* [Documentation of Task 1 in GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/documentation/README.md)
