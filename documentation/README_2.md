@@ -186,6 +186,36 @@ Question 3.1 is not needed by description of [Task 2 Overview](https://www.cours
 * [Documentation of Task 1 in GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/documentation/README.md)
 
 ## Question 3.2
+![Question 3.2](question_3.2.PNG)
+At first step we map every item from `input_2008` topic and form a key that holds the airport from-to, flight date, and AM or PM according to what is the `SCHEDULED_DEPARTURE_TIME` of the flight.
+```python
+airports_fromto = rows.map(lambda row: ( \
+		(row[0], row[1], row[2], AMOrPM(row[5])), \
+		(row[3], row[4], departureTimePretty(row[5]), float(row[8])) \
+	) \
+)
+```
+Next, we filter out all unnecessary data that is not relevant for answering question 3.2 and do a minimum search for each key. Minimum search is based on the arrival performance of the given flight. This way for each key-value pair we just keep tracking of the best flights.
+```python
+# Filtering just necessary flights
+airports_fromto = airports_fromto.filter(lambda row: row[0] == ('BOS', 'ATL', '2008-04-03', 'AM')) \
+		.union(airports_fromto.filter(lambda row: row[0] == ('ATL', 'LAX', '2008-04-05', 'PM'))) \
+		.union(airports_fromto.filter(lambda row: row[0] == ('PHX', 'JFK', '2008-09-07', 'AM'))) \
+		.union(airports_fromto.filter(lambda row: row[0] == ('JFK', 'MSP', '2008-09-09', 'PM'))) \
+		.union(airports_fromto.filter(lambda row: row[0] == ('DFW', 'STL', '2008-01-24', 'AM'))) \
+		.union(airports_fromto.filter(lambda row: row[0] == ('STL', 'ORD', '2008-01-26', 'PM'))) \
+		.union(airports_fromto.filter(lambda row: row[0] == ('LAX', 'MIA', '2008-05-16', 'AM'))) \
+		.union(airports_fromto.filter(lambda row: row[0] == ('MIA', 'LAX', '2008-05-18', 'PM')))
+
+# Minimum search
+airports_fromto = airports_fromto.updateStateByKey(getMinimum)
+```
+Results are saved to Kafka topic and then to Cassandra by a different Spark Streaming job.
+### References
+* [Spark Streaming job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_best_flights.py)
+* [Cassandra migration job on GitHub](https://github.com/gitaroktato/cloud-capstone/blob/master/python/streaming_best_flights_to_cassandra.py)
+* [Cassandra table definitions](https://github.com/gitaroktato/cloud-capstone/blob/master/cassandra/streaming_ddl.cql)
+
 
 # Results
 
