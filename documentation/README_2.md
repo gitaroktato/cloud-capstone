@@ -454,6 +454,22 @@ dataset. Topics that are populated to prepare data for Cassandra storage only ha
 
 # Streaming and Batch Comparison
 
+## Considering type of data
+
+* Data has historical characteristics, so using batch processing suits better in this case. There's no necessity for near real-time data generation that stream processing provides.
+
+## Considering type of questions & computations
+
+* Hadoop map-reduce jobs provide better performance on these kind of calculations (minimum search, average, best from a given category). Since they're doing one big-bang map and reduce operation on the whole dataset. Spark's iterative micro-batch approach causes more computation overhead. The final results take longer to produce with stream processing, because all the data has to flow through the pipelines. Only after that we get the precise computation.
+
+* Spark Streaming would provide better results, if we would investigate best performing airports, carriers on a given short time window (e.g. today or yesterday), or if we would do a different time of computation (e.g. estimated delay based on real-time data. Weather condition, air traffic, historical information from HDFS etc.)
+
+## Considering development effort
+
+* Streaming provides faster feedback, than big batch processing jobs. It's easier to spot if something goes wrong. Since Kafka allows consumption of messages multiple times, by just using offsets and offset resets, streaming jobs can be executed on production-like big datasets on the fly. Mistakes are cheaper and fixes are easier.
+
+* Batch processes, like map-reduce jobs, are often debugged and tested over a small amount of dataset. Only after that they can be executed on larger portion of data. From that point developers have to rely on logging functionality to determine job execution history and fine-tune the computation.
+
 # Command Reference
 If the reader is interested, here are the commands that were used to submit Spark jobs.
 * [GitHub link for terminal commands](https://github.com/gitaroktato/cloud-capstone/blob/master/documentation/streaming_scrapbook.md)
