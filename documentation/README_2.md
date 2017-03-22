@@ -420,6 +420,8 @@ dataset. Topics that are populated to prepare data for Cassandra storage only ha
 * Reducing storage space: Kafka topics need only 16BG of EBS storage to store every message necessary for all computations. Even with replication factor of 2.
 * Reducing network traffic: Since Kafka messages are noticeably smaller, less network bandwidth is needed during streaming operation.
 
+![Kafka logs size](kafka_logs_size.PNG)
+
 # Streaming and Batch Comparison
 
 # Command Reference
