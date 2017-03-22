@@ -1,4 +1,4 @@
-# Configuring kafka and ZK
+# Configuring Kafka and ZK
 Change basedir on BOTH from /tmp
 Change retention policy on Kafka
 Add delete.enabled on Kafka
@@ -18,7 +18,7 @@ cd ~/kafka-manager-1.3.3.1/target/universal/kafka-manager-1.3.3.1
 ./bin kafka-manager
 ...
 ```
-# PySpark with Kafka
+# PySpark with Kafka - Kafka client installation
 ```
 sudo pip install kafka
 ```
@@ -87,10 +87,3 @@ bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic test
 ```
 ~/spark-2.1.0-bin-hadoop2.7/bin/spark-submit --master spark://ip-172-31-49-121.ec2.internal:7077 --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.1.0,datastax:spark-cassandra-connector:2.0.0-RC1-s_2.11,org.apache.hadoop:hadoop-aws:2.7.3 --conf spark.streaming.kafka.maxRatePerPartition=1250 --conf spark.cassandra.connection.host=172.31.51.216  ./streaming_best_flights_to_cassandra.py 172.31.62.92:9092,172.31.55.234:9092
 ```
-
-# Optimizations
-Calculating top ten on partition and aggregate results on the director
-
-Cutting of unnecessary data in input topic and using it as staging area
-
-Aggregating top ten carriers for each airport to reduce data transfer and cassandra save time (not all airport-carrier pairs will be stored in DB)
